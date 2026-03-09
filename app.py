@@ -2,61 +2,96 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
 
 st.set_page_config(layout="wide")
 
-df=pd.read_csv('india')
-# print(df.head())
-list_of_state=list(df['State'].unique())
-list_of_state.insert(0,'Overall India')
+# ডেটা লোড করার সময় error হ্যান্ডেল করার জন্য try-except ব্যবহার করা ভালো
+df_india = pd.read_csv('india')
+df_bd = pd.read_csv('bangladesh_sat.csv')
+
+# --- সাইডবার (Navigation) ---
+st.sidebar.title('Country Data Visualization')
+country = st.sidebar.selectbox('Select a country', ['India', 'Bangladesh'])
+
+# দেশ অনুযায়ী ভেরিয়েবল সেট করা
+if country == 'India':
+    main_df = df_india
+    list_of_locations = list(main_df['State'].unique())
+    list_of_locations.sort()
+    list_of_locations.insert(0, 'Overall India')
+    location_label = "State/Province"
+    # ল্যাটিচিউড-লঙ্গিচিউড কলামের নাম আপনার ফাইল অনুযায়ী চেক করে নিন
+    lat_col, lon_col = "Latitude", "Longitude"
+
+else:  # Bangladesh
+    main_df = df_bd
+    list_of_locations = list(main_df['division'].unique())
+    list_of_locations.sort()
+    list_of_locations.insert(0, 'Overall Bangladesh')
+    location_label = "Division"
+    # বাংলাদেশের ফাইলের জন্য কলাম নাম (নিশ্চিত হয়ে নিন এগুলো আপনার CSV তে আছে কি না)
+    lat_col, lon_col = "lat", "lon"
 
 # --- মেইন ড্যাশবোর্ড (KPI Section) ---
-st.title("India Census Overview")
+st.title(f"{country} Data Overview")
 
 kpi1, kpi2, kpi3 = st.columns(3)
 
 with kpi1:
-    total_pop = df['Population'].sum()
+    # Population কলামটি আপনার ফাইলের নাম অনুযায়ী মিলিয়ে নিন
+    total_pop = main_df['Population'].sum() if 'Population' in main_df.columns else 0
     st.metric(label="👥 Total Population", value=f"{total_pop:,}")
 
 with kpi2:
-    # এখানে ভুল ছিল, গড় লিটারেসি রেট বের করার সঠিক নিয়ম:
-    avg_lit = df['literacy_rate'].mean()
-    st.metric(label="🎓 Avg Literacy Rate", value=f"{avg_lit:.2f}%")
+    # লিটারেসি রেট গড় করা হয়েছে
+    lit_col = 'literacy_rate' if 'literacy_rate' in main_df.columns else main_df.columns[-1]
+    avg_lit = main_df[lit_col].mean()
+    st.metric(label="🎓 Avg Literacy/Parameter Rate", value=f"{avg_lit:.2f}%")
 
 with kpi3:
-    st.metric(label="📍 Total Districts", value=len(df))
+    st.metric(label="📍 Total Areas/Districts", value=len(main_df))
 
 st.markdown("---")
 
+# --- ডাইনামিক ফিল্টার (Sidebar) ---
+selected_location = st.sidebar.selectbox(location_label, list_of_locations)
 
-st.sidebar.title('Country Data Visualization')
-st.sidebar.selectbox('Select a country',['Bangladesh','India','Pakistan'])
+# শুধুমাত্র সংখ্যাসূচক কলামগুলো প্যারামিটার হিসেবে দেখানো
+if country == "India":
+    numeric_cols = sorted(main_df.columns[5:])
+else:
+    numeric_cols = sorted(main_df.select_dtypes(include=np.number).columns)
+    numeric_cols = [c for c in numeric_cols if c not in ["lat", "lon"]]
 
-selected_state=st.sidebar.selectbox('State/Province',list_of_state)
+primary = st.sidebar.selectbox('Select Primary Parameter (Size)', numeric_cols)
+secondary = st.sidebar.selectbox('Select Secondary Parameter (Color)', numeric_cols)
 
-primary=st.sidebar.selectbox('Select Primary Parameter',sorted(df.columns[5:]))
-secondary=st.sidebar.selectbox('Select secondary Parameter',sorted(df.columns[5:]))
+plot = st.sidebar.button('Plot Graph')
 
-plot=st.sidebar.button('Plot Graph')
 if plot:
-    st.subheader(f"{primary} vs {secondary} Visualization")
+    st.subheader(f"{primary} vs {secondary} in {selected_location}")
 
-    if selected_state == 'Overall India':
-        fig = px.scatter_map(df,
-                     lat="Latitude", lon="Longitude",
-                     size=primary, color=secondary,
-                     zoom=3, height=600,
-                     title="Overall India Analysis")
-        st.plotly_chart(fig, width='stretch')
+    # ফিল্টারিং লজিক
+    if "Overall" in selected_location:
+        display_df = main_df
+        zoom_val = 4 if country == 'Bangladesh' else 3
     else:
-        #plot for state
-        state_df = df[df['State'] == selected_state]
-        fig = px.scatter_map(state_df,
-                     lat="Latitude", lon="Longitude",
-                     size=primary, color=secondary,
-                     zoom=3, height=600,
-                     title="Overall India Analysis")
-        st.plotly_chart(fig, width='stretch')
+        area_col = 'State' if country == 'India' else 'division'
+        display_df = main_df[main_df[area_col] == selected_location]
+        zoom_val = 6
 
+    # ম্যাপ তৈরি
+    fig = px.scatter_mapbox(
+        display_df,
+        lat=lat_col,
+        lon=lon_col,
+        size=primary,
+        color=secondary,
+        size_max=15,
+        zoom=zoom_val,
+        height=600,
+        mapbox_style="open-street-map",
+        title=f"Analysis of {selected_location}"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
