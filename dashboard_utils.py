@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Callable
+
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -61,6 +63,7 @@ def render_country_page(
     overall_label: str,
     primary_options: list[str] | None = None,
     secondary_options: list[str] | None = None,
+    render_plot_fn: Callable[..., None] | None = None,
 ) -> None:
     st.title(f"{country_name} Analytics")
 
@@ -121,16 +124,27 @@ def render_country_page(
     plot_df[lat_column] = _coerce_numeric(plot_df[lat_column])
     plot_df[lon_column] = _coerce_numeric(plot_df[lon_column])
 
-    fig = px.scatter_mapbox(
-        plot_df,
-        lat=lat_column,
-        lon=lon_column,
-        size=primary,
-        color=secondary,
-        size_max=16,
-        zoom=zoom,
-        height=650,
-        mapbox_style="open-street-map",
-        title=f"{country_name}: {selected_location}",
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    if render_plot_fn is not None:
+        render_plot_fn(
+            plot_df=plot_df,
+            primary=primary,
+            secondary=secondary,
+            lat_column=lat_column,
+            lon_column=lon_column,
+            zoom=zoom,
+            title=f"{country_name}: {selected_location}",
+        )
+    else:
+        fig = px.scatter_mapbox(
+            plot_df,
+            lat=lat_column,
+            lon=lon_column,
+            size=primary,
+            color=secondary,
+            size_max=16,
+            zoom=zoom,
+            height=650,
+            mapbox_style="open-street-map",
+            title=f"{country_name}: {selected_location}",
+        )
+        st.plotly_chart(fig, use_container_width=True)
