@@ -8,7 +8,9 @@ import streamlit as st
 INDIA_FILE = "india"
 # BANGLADESH_FILE = "bangladesh_sat.csv"
 
-BANGLADESH_FILE="Up_Ban"
+# BANGLADESH_FILE="Up_Ban"
+
+BANGLADESH_FILE="final_ban"
 
 @st.cache_data
 def load_india_data() -> pd.DataFrame:
@@ -20,17 +22,26 @@ def load_bangladesh_data() -> pd.DataFrame:
     return pd.read_csv(BANGLADESH_FILE)
 
 
+def _coerce_numeric(series: pd.Series) -> pd.Series:
+    if pd.api.types.is_numeric_dtype(series):
+        return series
+    cleaned = series.astype(str).str.replace(",", "", regex=False).str.strip()
+    return pd.to_numeric(cleaned, errors="coerce")
+
+
 def _safe_metric_value(df: pd.DataFrame, column_candidates: list[str], default: float = 0.0) -> float:
     for column in column_candidates:
         if column in df.columns:
-            return float(df[column].sum())
+            series = _coerce_numeric(df[column])
+            return float(series.fillna(0).sum())
     return float(default)
 
 
 def _safe_mean_value(df: pd.DataFrame, column_candidates: list[str], fallback_to_numeric: bool = True) -> float:
     for column in column_candidates:
         if column in df.columns:
-            return float(df[column].mean())
+            series = _coerce_numeric(df[column])
+            return float(series.mean(skipna=True))
 
     if fallback_to_numeric:
         numeric_df = df.select_dtypes(include=np.number)
@@ -48,6 +59,8 @@ def render_country_page(
     lat_column: str,
     lon_column: str,
     overall_label: str,
+    primary_options: list[str] | None = None,
+    secondary_options: list[str] | None = None,
 ) -> None:
     st.title(f"{country_name} Analytics")
 
@@ -61,12 +74,22 @@ def render_country_page(
         c for c in df.select_dtypes(include=np.number).columns.tolist() if c not in {lat_column, lon_column}
     ]
 
-    if not numeric_cols:
-        st.error("No numeric columns available for plotting.")
+    if primary_options is not None:
+        primary_candidates = [c for c in primary_options if c in df.columns]
+    else:
+        primary_candidates = numeric_cols
+
+    if secondary_options is not None:
+        secondary_candidates = [c for c in secondary_options if c in df.columns]
+    else:
+        secondary_candidates = numeric_cols
+
+    if not primary_candidates or not secondary_candidates:
+        st.error("No valid columns available for plotting.")
         return
 
-    primary = st.sidebar.selectbox("Primary Parameter (Size)", sorted(numeric_cols))
-    secondary = st.sidebar.selectbox("Secondary Parameter (Color)", sorted(numeric_cols))
+    primary = st.sidebar.selectbox("Primary Parameter (Size)", primary_candidates)
+    secondary = st.sidebar.selectbox("Secondary Parameter (Color)", secondary_candidates)
 
     kpi1, kpi2, kpi3 = st.columns(3)
 
@@ -91,6 +114,12 @@ def render_country_page(
         zoom = 6
 
     st.subheader(f"{primary} vs {secondary} ({selected_location})")
+
+    plot_df = plot_df.copy()
+    plot_df[primary] = _coerce_numeric(plot_df[primary])
+    plot_df[secondary] = _coerce_numeric(plot_df[secondary])
+    plot_df[lat_column] = _coerce_numeric(plot_df[lat_column])
+    plot_df[lon_column] = _coerce_numeric(plot_df[lon_column])
 
     fig = px.scatter_mapbox(
         plot_df,

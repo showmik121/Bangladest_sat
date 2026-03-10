@@ -7,6 +7,13 @@ st.set_page_config(page_title="Country Dashboard", page_icon="??", layout="wide"
 st.title("Country Data Dashboard")
 st.caption("Use the left sidebar to open India or Bangladesh specific analysis pages.")
 
+st.subheader("Quick Navigation")
+selected_country = st.selectbox("Go to country page", ["Select", "Bangladesh", "India"])
+if selected_country == "Bangladesh":
+    st.switch_page("pages/2_Bangladesh.py")
+elif selected_country == "India":
+    st.switch_page("pages/1_India.py")
+
 india_df = load_india_data()
 bd_df = load_bangladesh_data()
 
