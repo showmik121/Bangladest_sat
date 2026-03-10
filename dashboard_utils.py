@@ -61,6 +61,7 @@ def render_country_page(
     lat_column: str,
     lon_column: str,
     overall_label: str,
+    subarea_column: str | None = None,
     primary_options: list[str] | None = None,
     secondary_options: list[str] | None = None,
     render_plot_fn: Callable[..., None] | None = None,
@@ -112,11 +113,37 @@ def render_country_page(
     if selected_location == overall_label:
         plot_df = df
         zoom = 4 if country_name == "Bangladesh" else 3
+        display_location = overall_label
     else:
-        plot_df = df[df[area_column] == selected_location]
+        division_df = df[df[area_column] == selected_location]
         zoom = 6
+        if subarea_column and subarea_column in df.columns:
+            districts_by_division = df.groupby(area_column)[subarea_column].apply(list).to_dict()
+            if selected_location in districts_by_division:
+                district_list = sorted(
+                    pd.Series(districts_by_division[selected_location]).dropna().unique().tolist()
+                )
+                overall_subarea_label = f"Overall {selected_location}"
+                district_list.insert(0, overall_subarea_label)
+                selected_subarea = st.sidebar.selectbox(
+                    f"Districts in {selected_location}",
+                    district_list,
+                )
+                if selected_subarea == overall_subarea_label:
+                    plot_df = division_df
+                    display_location = selected_subarea
+                else:
+                    plot_df = df[df[subarea_column] == selected_subarea]
+                    zoom = 8
+                    display_location = selected_subarea
+            else:
+                plot_df = division_df
+                display_location = selected_location
+        else:
+            plot_df = division_df
+            display_location = selected_location
 
-    st.subheader(f"{primary} vs {secondary} ({selected_location})")
+    st.subheader(f"{primary} vs {secondary} ({display_location})")
 
     plot_df = plot_df.copy()
     plot_df[primary] = _coerce_numeric(plot_df[primary])
@@ -132,7 +159,7 @@ def render_country_page(
             lat_column=lat_column,
             lon_column=lon_column,
             zoom=zoom,
-            title=f"{country_name}: {selected_location}",
+            title=f"{country_name}: {display_location}",
         )
     else:
         fig = px.scatter_mapbox(
@@ -145,6 +172,6 @@ def render_country_page(
             zoom=zoom,
             height=650,
             mapbox_style="open-street-map",
-            title=f"{country_name}: {selected_location}",
+            title=f"{country_name}: {display_location}",
         )
         st.plotly_chart(fig, use_container_width=True)

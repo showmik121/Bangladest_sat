@@ -84,6 +84,7 @@ render_country_page(
     country_name="Bangladesh",
     df=bangladesh_df,
     area_column="division",
+    subarea_column="Name",
     lat_column="lat",
     lon_column="lon",
     overall_label="Overall Bangladesh",
