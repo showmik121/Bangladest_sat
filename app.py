@@ -1,14 +1,22 @@
 import streamlit as st
 
-from dashboard_utils import load_bangladesh_data, load_india_data
+from dashboard_utils import inject_sidebar_style, load_bangladesh_data, load_india_data
 
 st.set_page_config(page_title="Country Dashboard", page_icon="??", layout="wide")
+
+inject_sidebar_style()
+st.sidebar.title("📊 Data Explorer")
+st.sidebar.markdown("Navigation")
+st.sidebar.page_link("app.py", label="Home")
+st.sidebar.page_link("pages/2_Bangladesh.py", label="Bangladesh")
+st.sidebar.page_link("pages/1_India.py", label="India")
+st.sidebar.markdown("---")
 
 st.title("Country Data Dashboard")
 st.caption("Use the left sidebar to open India or Bangladesh specific analysis pages.")
 
 st.subheader("Quick Navigation")
-selected_country = st.selectbox("Go to country page", ["Select", "Bangladesh", "India"])
+selected_country = st.sidebar.selectbox("Go to country page", ["Select", "Bangladesh", "India"])
 if selected_country == "Bangladesh":
     st.switch_page("pages/2_Bangladesh.py")
 elif selected_country == "India":

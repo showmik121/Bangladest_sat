@@ -14,6 +14,16 @@ INDIA_FILE = "india"
 
 BANGLADESH_FILE="final_ban"
 
+def inject_sidebar_style() -> None:
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebarNav"] { display: none; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 @st.cache_data
 def load_india_data() -> pd.DataFrame:
     return pd.read_csv(INDIA_FILE)
@@ -65,13 +75,17 @@ def render_country_page(
     primary_options: list[str] | None = None,
     secondary_options: list[str] | None = None,
     render_plot_fn: Callable[..., None] | None = None,
+    render_overall_pre_map_fn: Callable[..., None] | None = None,
+    navigate_on_subarea_select: bool = False,
+    subarea_page_path: str | None = None,
+    subarea_state_key: str | None = None,
+    area_state_key: str | None = None,
 ) -> None:
     st.title(f"{country_name} Analytics")
 
     locations = sorted(df[area_column].dropna().unique().tolist())
     locations.insert(0, overall_label)
 
-    st.sidebar.header(f"{country_name} Filters")
     selected_location = st.sidebar.selectbox("Select Area", locations)
 
     numeric_cols = [
@@ -136,12 +150,25 @@ def render_country_page(
                     plot_df = df[df[subarea_column] == selected_subarea]
                     zoom = 8
                     display_location = selected_subarea
+                    if subarea_state_key is None:
+                        safe_name = country_name.lower().replace(" ", "_")
+                        subarea_state_key = f"{safe_name}_selected_subarea"
+                    if area_state_key is None:
+                        safe_name = country_name.lower().replace(" ", "_")
+                        area_state_key = f"{safe_name}_selected_area"
+                    st.session_state[subarea_state_key] = selected_subarea
+                    st.session_state[area_state_key] = selected_location
+                    if navigate_on_subarea_select and subarea_page_path:
+                        st.switch_page(subarea_page_path)
             else:
                 plot_df = division_df
                 display_location = selected_location
         else:
             plot_df = division_df
             display_location = selected_location
+
+    if selected_location == overall_label and render_overall_pre_map_fn is not None:
+        render_overall_pre_map_fn(plot_df=plot_df)
 
     st.subheader(f"{primary} vs {secondary} ({display_location})")
 
