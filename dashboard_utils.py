@@ -14,6 +14,9 @@ INDIA_FILE = "india"
 
 BANGLADESH_FILE="final_ban"
 
+Bangladesh_Gdp="Gdp"
+
+
 def inject_sidebar_style() -> None:
     st.markdown(
         """
@@ -33,6 +36,9 @@ def load_india_data() -> pd.DataFrame:
 def load_bangladesh_data() -> pd.DataFrame:
     return pd.read_csv(BANGLADESH_FILE)
 
+@st.cache_data
+def load_bangladesh_gdp_data() -> pd.DataFrame:
+    return pd.read_csv(Bangladesh_Gdp)
 
 def _coerce_numeric(series: pd.Series) -> pd.Series:
     if pd.api.types.is_numeric_dtype(series):
@@ -76,12 +82,20 @@ def render_country_page(
     secondary_options: list[str] | None = None,
     render_plot_fn: Callable[..., None] | None = None,
     render_overall_pre_map_fn: Callable[..., None] | None = None,
+    render_overall_post_map_fn: Callable[..., None] | None = None,
     navigate_on_subarea_select: bool = False,
     subarea_page_path: str | None = None,
     subarea_state_key: str | None = None,
     area_state_key: str | None = None,
+    title_override: str | None = None,
+    header_description: str | None = None,
+    render_kpi_fn: Callable[..., None] | None = None,
+    map_section_title: str | None = None,
+    map_section_description: str | None = None,
 ) -> None:
-    st.title(f"{country_name} Analytics")
+    st.title(title_override or f"{country_name} Analytics")
+    if header_description:
+        st.markdown(header_description)
 
     locations = sorted(df[area_column].dropna().unique().tolist())
     locations.insert(0, overall_label)
@@ -108,21 +122,6 @@ def render_country_page(
 
     primary = st.sidebar.selectbox("Primary Parameter (Size)", primary_candidates)
     secondary = st.sidebar.selectbox("Secondary Parameter (Color)", secondary_candidates)
-
-    kpi1, kpi2, kpi3 = st.columns(3)
-
-    with kpi1:
-        total_pop = _safe_metric_value(df, ["Population", "population"])
-        st.metric("Total Population", f"{int(total_pop):,}")
-
-    with kpi2:
-        literacy_avg = _safe_mean_value(df, ["literacy_rate"])
-        st.metric("Avg Literacy Rate", f"{literacy_avg:.2f}%")
-
-    with kpi3:
-        st.metric("Total Records", f"{len(df):,}")
-
-    st.markdown("---")
 
     if selected_location == overall_label:
         plot_df = df
@@ -167,8 +166,34 @@ def render_country_page(
             plot_df = division_df
             display_location = selected_location
 
+    if render_kpi_fn is not None:
+        render_kpi_fn(plot_df=plot_df)
+    else:
+        kpi1, kpi2, kpi3 = st.columns(3)
+
+        with kpi1:
+            total_pop = _safe_metric_value(plot_df, ["Population", "population"])
+            st.metric("Total Population", f"{int(total_pop):,}")
+
+        with kpi2:
+            literacy_avg = _safe_mean_value(plot_df, ["literacy_rate"])
+            st.metric("Avg Literacy Rate", f"{literacy_avg:.2f}%")
+
+        with kpi3:
+            st.metric("Total Records", f"{len(plot_df):,}")
+
+    st.markdown("---")
+    
+    st.header("Deep Dive: National Analytics")
+    st.markdown("---")
+
     if selected_location == overall_label and render_overall_pre_map_fn is not None:
         render_overall_pre_map_fn(plot_df=plot_df)
+
+    if map_section_title:
+        st.header(map_section_title)
+        if map_section_description:
+            st.caption(map_section_description)
 
     st.subheader(f"{primary} vs {secondary} ({display_location})")
 
@@ -202,3 +227,6 @@ def render_country_page(
             title=f"{country_name}: {display_location}",
         )
         st.plotly_chart(fig, use_container_width=True)
+
+    if selected_location == overall_label and render_overall_post_map_fn is not None:
+        render_overall_post_map_fn(plot_df=plot_df)
