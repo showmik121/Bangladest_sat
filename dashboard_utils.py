@@ -9,14 +9,12 @@ import streamlit as st
 
 INDIA_FILE = "india"
 # BANGLADESH_FILE = "bangladesh_sat.csv"
-
-# BANGLADESH_FILE="Up_Ban"
-
-BANGLADESH_FILE="final_ban"
-
-Bangladesh_Gdp="Gdp"
+# BANGLADESH_FILE = "Up_Ban"
+BANGLADESH_FILE = "final_ban"
+BANGLADESH_GDP_FILE = "Gdp"
 
 
+# পরিষ্কার কাস্টম ন্যাভের জন্য Streamlit-এর ডিফল্ট সাইডবার ন্যাভ লুকানো।
 def inject_sidebar_style() -> None:
     st.markdown(
         """
@@ -27,19 +25,37 @@ def inject_sidebar_style() -> None:
         unsafe_allow_html=True,
     )
 
+def load_country_data(file_path: str, name: str) -> pd.DataFrame:
+    try:
+        df = pd.read_csv(file_path)
+        st.session_state[f"{name}_data_loaded"] = True
+        return df
+    except FileNotFoundError:
+        st.error(f"File not found: {file_path}")
+        st.stop()
+    except Exception as exc:
+        st.error(f"Error loading {name} data: {exc}")
+        st.stop()
+
+
+# ইন্ডিয়া ডেটাসেটের জন্য ক্যাশড লোডার।
 @st.cache_data
 def load_india_data() -> pd.DataFrame:
-    return pd.read_csv(INDIA_FILE)
+    return load_country_data(INDIA_FILE, "india")
 
 
+# বাংলাদেশ জেলা ডেটাসেটের জন্য ক্যাশড লোডার।
 @st.cache_data
 def load_bangladesh_data() -> pd.DataFrame:
-    return pd.read_csv(BANGLADESH_FILE)
+    return load_country_data(BANGLADESH_FILE, "bangladesh")
 
+
+# বাংলাদেশ GDP টাইম-সিরিজ ডেটাসেটের জন্য ক্যাশড লোডার।
 @st.cache_data
 def load_bangladesh_gdp_data() -> pd.DataFrame:
-    return pd.read_csv(Bangladesh_Gdp)
+    return load_country_data(BANGLADESH_GDP_FILE, "bd_gdp")
 
+# সংখ্যার মতো স্ট্রিংকে সংখ্যায় রূপান্তর করে (কমা, স্পেসসহ)।
 def _coerce_numeric(series: pd.Series) -> pd.Series:
     if pd.api.types.is_numeric_dtype(series):
         return series
@@ -47,6 +63,7 @@ def _coerce_numeric(series: pd.Series) -> pd.Series:
     return pd.to_numeric(cleaned, errors="coerce")
 
 
+# প্রথম ম্যাচ হওয়া কলাম থেকে মোট যোগফল বের করে, না পেলে ডিফল্ট।
 def _safe_metric_value(df: pd.DataFrame, column_candidates: list[str], default: float = 0.0) -> float:
     for column in column_candidates:
         if column in df.columns:
@@ -55,6 +72,7 @@ def _safe_metric_value(df: pd.DataFrame, column_candidates: list[str], default: 
     return float(default)
 
 
+# প্রথম ম্যাচ হওয়া কলাম বা সব নিউমেরিক কলাম থেকে গড় বের করে।
 def _safe_mean_value(df: pd.DataFrame, column_candidates: list[str], fallback_to_numeric: bool = True) -> float:
     for column in column_candidates:
         if column in df.columns:
@@ -83,6 +101,7 @@ def render_country_page(
     render_plot_fn: Callable[..., None] | None = None,
     render_overall_pre_map_fn: Callable[..., None] | None = None,
     render_overall_post_map_fn: Callable[..., None] | None = None,
+    render_overall_header_fn: Callable[..., None] | None = None,
     navigate_on_subarea_select: bool = False,
     subarea_page_path: str | None = None,
     subarea_state_key: str | None = None,
@@ -93,7 +112,9 @@ def render_country_page(
     map_section_title: str | None = None,
     map_section_description: str | None = None,
 ) -> None:
-    st.title(title_override or f"{country_name} Analytics")
+    title_text = title_override if title_override is not None else f"{country_name} Analytics"
+    if title_text:
+        st.title(title_text)
     if header_description:
         st.markdown(header_description)
 
@@ -166,21 +187,12 @@ def render_country_page(
             plot_df = division_df
             display_location = selected_location
 
+    if selected_location == overall_label and render_overall_header_fn is not None:
+        render_overall_header_fn(plot_df=plot_df)
+
     if render_kpi_fn is not None:
         render_kpi_fn(plot_df=plot_df)
-    else:
-        kpi1, kpi2, kpi3 = st.columns(3)
-
-        with kpi1:
-            total_pop = _safe_metric_value(plot_df, ["Population", "population"])
-            st.metric("Total Population", f"{int(total_pop):,}")
-
-        with kpi2:
-            literacy_avg = _safe_mean_value(plot_df, ["literacy_rate"])
-            st.metric("Avg Literacy Rate", f"{literacy_avg:.2f}%")
-
-        with kpi3:
-            st.metric("Total Records", f"{len(plot_df):,}")
+    
 
     st.markdown("---")
     

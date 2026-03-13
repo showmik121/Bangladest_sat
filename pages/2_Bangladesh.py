@@ -45,10 +45,12 @@ color_params = [
     "health_index",
 ]
 
+# সংখ্যার মতো মানগুলোকে নিরাপদভাবে সংখ্যায় রূপান্তর করে।
 def _to_numeric(series: pd.Series) -> pd.Series:
     cleaned = series.astype(str).str.replace(",", "", regex=False).str.strip()
     return pd.to_numeric(cleaned, errors="coerce")
 
+# বাংলাদেশ ডেটাসেটের জন্য কাস্টম KPI রো।
 def _render_bangladesh_kpis(*, plot_df: pd.DataFrame) -> None:
     districts = plot_df["Name"].dropna().nunique() if "Name" in plot_df.columns else len(plot_df)
     total_population = (
@@ -76,10 +78,124 @@ def _render_bangladesh_kpis(*, plot_df: pd.DataFrame) -> None:
         st.metric("Literacy", f"{avg_literacy:.2f}%")
     with k4:
         st.metric("Poverty", f"{avg_poverty:.2f}%")
-        
+
+
+# সামগ্রিক বাংলাদেশ ভিউয়ের জন্য হেডার/হিরো সেকশন।
+def _render_bangladesh_overall_header(*, plot_df: pd.DataFrame) -> None:
+    st.markdown(
+        """
+        <style>
+        .country-hero {
+            background: #eaf3f1;
+            padding: 32px;
+            border-radius: 16px;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 32px;
+            align-items: start;
+            margin-bottom: 25px;
+        }
+        .country-crumb {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .country-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .country-flag {
+            width: 120px;
+            height: 80px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+        }
+        .country-meta {
+            font-size: 15px;
+            color: #334155;
+            line-height: 1.7;
+        }
+        .country-desc {
+            font-size: 16px;
+            color: #334155;
+            line-height: 1.7;
+        }
+        [data-testid="stMetric"] {
+            background: white;
+            padding: 16px;
+            border-radius: 14px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+        [data-testid="stMetricValue"] {
+            font-size: 30px;
+            font-weight: 700;
+        }
+        @media (prefers-color-scheme: dark) {
+            .country-hero {
+                background: #0b1220;
+                border: 1px solid rgba(148, 163, 184, 0.18);
+            }
+            .country-crumb { color: #94a3b8; }
+            .country-title { color: #e2e8f0; }
+            .country-meta { color: #cbd5f5; }
+            .country-desc { color: #cbd5f5; }
+            .country-meta b { color: #f1f5f9; }
+            [data-testid="stMetric"] {
+                background: #0f172a;
+                box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+                border: 1px solid rgba(148, 163, 184, 0.18);
+            }
+            [data-testid="stMetricValue"] { color: #f8fafc; }
+            [data-testid="stMetricLabel"] { color: #cbd5f5; }
+        }
+        @media (max-width: 900px) {
+            .country-hero { grid-template-columns: 1fr; }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    flag_svg = """
+    <svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+        <rect width="120" height="80" fill="#006a4e"/>
+        <circle cx="52" cy="40" r="20" fill="#f42a41"/>
+    </svg>
+    """
+
+    st.markdown(
+        f"""
+        <div class="country-hero">
+            <div>
+                <div class="country-crumb">Countries &nbsp;›&nbsp; Bangladesh</div>
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;">
+                    <div class="country-flag">{flag_svg}</div>
+                    <div class="country-title">Bangladesh</div>
+                </div>
+                <div class="country-meta">
+                    <b>Capital:</b> Dhaka<br/>
+                    <b>Continent:</b> Asia<br/>
+                    <b>Region:</b> Southern Asia<br/>
+                    <b>Largest Cities:</b> Dhaka, Chittagong, Sylhet<br/>
+                    <b>Abbreviation:</b> BGD
+                </div>
+            </div>
+            <div class="country-desc">
+                Bangladesh is a country in South Asia known for the Bengal Delta and the Sundarbans.
+                This dashboard provides district-level analytics for population, education,
+                poverty, infrastructure access, and development indicators.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 
+
+# সামগ্রিক বাংলাদেশ ভিউয়ের জন্য ন্যাশনাল-লেভেল অ্যানালিটিক্স।
 def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
     required_cols = {"Name", "division", "literacy_rate", "population", "poverty_rate"}
     missing = sorted(required_cols - set(plot_df.columns))
@@ -213,6 +329,7 @@ def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
     )
 
 # বাংলাদেশ পেজের মূল চার্ট ও KPI রেন্ডার
+# বাংলাদেশের জন্য কাস্টম বুদ্বুদ (বাবল) ম্যাপ স্টাইলিং।
 def render_bangladesh_plot(
     *,
     plot_df,
@@ -276,15 +393,13 @@ render_country_page(
     secondary_options=color_params,
     render_plot_fn=render_bangladesh_plot,
     render_overall_post_map_fn=render_bangladesh_overall_analysis,
+    render_overall_header_fn=_render_bangladesh_overall_header,
     navigate_on_subarea_select=True,
     subarea_page_path="pages/3_District.py",
     subarea_state_key="bd_selected_district",
     area_state_key="bd_selected_division",
-    title_override="Bangladesh Development Dashboard",
-    header_description=(
-        "Dashboard of district and division indicators covering population, education, "
-        "poverty, and economic trends."
-    ),
+    title_override="",
+    header_description=None,
     map_section_title="Map Section",
     map_section_description="Interactive district bubble map for comparing indicators.",
     render_kpi_fn=_render_bangladesh_kpis,

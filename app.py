@@ -13,11 +13,9 @@ inject_sidebar_style()
 # ---------- Sidebar ----------
 st.sidebar.title("📊 Data Explorer")
 st.sidebar.markdown("Navigation")
-
-st.sidebar.page_link("app.py", label="🏠 Home")
-st.sidebar.page_link("pages/2_Bangladesh.py", label="🇧🇩 Bangladesh")
-st.sidebar.page_link("pages/1_India.py", label="🇮🇳 India")
-
+st.sidebar.page_link("app.py", label="Home")
+st.sidebar.page_link("pages/2_Bangladesh.py", label="Bangladesh")
+st.sidebar.page_link("pages/1_India.py", label="India")
 st.sidebar.markdown("---")
 
 # ---------- Small Styling ----------
