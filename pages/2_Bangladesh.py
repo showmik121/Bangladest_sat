@@ -6,6 +6,7 @@ from dashboard_utils import (
     inject_sidebar_style,
     load_bangladesh_data,
     load_bangladesh_gdp_data,
+    load_bangladesh_literacy_data,
     render_country_page,
 )
 
@@ -24,6 +25,7 @@ st.sidebar.markdown("🌍 Regional Dashboard")
 # বাংলাদেশ ডেটা লোড করা
 bangladesh_df = load_bangladesh_data()
 bangladesh_gdp_df = load_bangladesh_gdp_data()
+bangladesh_literacy_df = load_bangladesh_literacy_data()
 
 # বাংলাদেশ পেজে নির্দিষ্ট (ম্যানুয়াল) সাইজ/কালার প্যারামিটার ব্যবহার করা হচ্ছে।
 size_params = [
@@ -58,11 +60,14 @@ def _render_bangladesh_kpis(*, plot_df: pd.DataFrame) -> None:
         if "population" in plot_df.columns
         else 0
     )
-    avg_literacy = (
-        _to_numeric(plot_df["literacy_rate"]).mean()
-        if "literacy_rate" in plot_df.columns
-        else 0
-    )
+    latest_literacy = 0
+    if {"Year", "Literacy Rate(%)"}.issubset(bangladesh_literacy_df.columns):
+        lita = bangladesh_literacy_df.copy()
+        lita["Year"] = _to_numeric(lita["Year"])
+        lita["Literacy Rate(%)"] = _to_numeric(lita["Literacy Rate(%)"])
+        lita = lita.dropna(subset=["Year", "Literacy Rate(%)"]).sort_values("Year")
+        if not lita.empty:
+            latest_literacy = float(lita.iloc[-1]["Literacy Rate(%)"])
     avg_poverty = (
         _to_numeric(plot_df["poverty_rate"]).mean()
         if "poverty_rate" in plot_df.columns
@@ -75,7 +80,7 @@ def _render_bangladesh_kpis(*, plot_df: pd.DataFrame) -> None:
     with k2:
         st.metric("Population", f"{int(total_population):,}")
     with k3:
-        st.metric("Literacy", f"{avg_literacy:.2f}%")
+        st.metric("Literacy", f"{latest_literacy:.2f}%")
     with k4:
         st.metric("Poverty", f"{avg_poverty:.2f}%")
 
@@ -219,33 +224,88 @@ def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
     
 
     st.subheader("Economic Trend")
-    st.markdown("#### Bangladesh GDP Trend (Line Graph)")
-    gdp_required_cols = {"Country Name", "Year", "GDP"}
-    gdp_missing = sorted(gdp_required_cols - set(bangladesh_gdp_df.columns))
-    if gdp_missing:
-        st.info(f"GDP trend skipped. Missing columns: {', '.join(gdp_missing)}.")
-    else:
-        gdp_temp = bangladesh_gdp_df.copy()
-        gdp_temp = gdp_temp[gdp_temp["Country Name"].astype(str).str.strip() == "Bangladesh"]
-        gdp_temp["Year"] = _to_numeric(gdp_temp["Year"])
-        gdp_temp["GDP"] = _to_numeric(gdp_temp["GDP"])
-        gdp_temp = gdp_temp.dropna(subset=["Year", "GDP"]).sort_values("Year")
+    k1, k2 = st.columns(2)
 
-        if gdp_temp.empty:
-            st.info("GDP trend skipped. No Bangladesh records found.")
+    with k1:
+        st.markdown("#### Bangladesh GDP Trend (Line Graph)")
+        gdp_required_cols = {"Country Name", "Year", "GDP"}
+        gdp_missing = sorted(gdp_required_cols - set(bangladesh_gdp_df.columns))
+        if gdp_missing:
+            st.info(f"GDP trend skipped. Missing columns: {', '.join(gdp_missing)}.")
         else:
-            fig_gdp = px.line(
-                gdp_temp,
-                x="Year",
-                y="GDP",
-                markers=True,
-                hover_name="Country Name",
-                title="Bangladesh GDP Over Time",
-            )
-            fig_gdp.update_layout(margin=dict(l=0, r=0, t=40, b=0))
-            st.plotly_chart(fig_gdp, use_container_width=True)
+            gdp_temp = bangladesh_gdp_df.copy()
+            gdp_temp = gdp_temp[gdp_temp["Country Name"].astype(str).str.strip() == "Bangladesh"]
+            gdp_temp["Year"] = _to_numeric(gdp_temp["Year"])
+            gdp_temp["GDP"] = _to_numeric(gdp_temp["GDP"])
+            gdp_temp = gdp_temp.dropna(subset=["Year", "GDP"]).sort_values("Year")
+
+            if gdp_temp.empty:
+                st.info("GDP trend skipped. No Bangladesh records found.")
+            else:
+                fig_gdp = px.line(
+                    gdp_temp,
+                    x="Year",
+                    y="GDP",
+                    markers=True,
+                    hover_name="Country Name",
+                    title="Bangladesh GDP Over Time",
+                )
+                fig_gdp.update_layout(margin=dict(l=0, r=0, t=40, b=0))
+                st.plotly_chart(fig_gdp, use_container_width=True)
+
+    with k2:
+        st.markdown("#### Bangladesh Inflation Rate (Line Graph)")
+        inflation_required_cols = {"Year", "Inflation Rate (%)"}
+        inflation_missing = sorted(inflation_required_cols - set(bangladesh_literacy_df.columns))
+        if inflation_missing:
+            st.info(f"Inflation trend skipped. Missing columns: {', '.join(inflation_missing)}.")
+        else:
+            lita = bangladesh_literacy_df.copy()
+            lita["Year"] = _to_numeric(lita["Year"])
+            lita["Inflation Rate (%)"] = _to_numeric(lita["Inflation Rate (%)"])
+            lita = lita.dropna(subset=["Year", "Inflation Rate (%)"]).sort_values("Year")
+
+            if lita.empty:
+                st.info("Inflation trend skipped. No records found.")
+            else:
+                fig_inflation = px.line(
+                    lita,
+                    x="Year",
+                    y="Inflation Rate (%)",
+                    title="Bangladesh Inflation rate",
+                )
+                fig_inflation.update_traces(
+                    mode="lines+markers",
+                    line=dict(color="#f97316"),
+                    marker=dict(color="#f97316"),
+                    hovertemplate="Year: %{x}<br>Inflation Rate: %{y:.2f}%<extra></extra>",
+                )
+                fig_inflation.update_layout(margin=dict(l=0, r=0, t=40, b=0))
+                st.plotly_chart(fig_inflation, use_container_width=True)
 
     st.subheader("Education Insights")
+    if {"Year", "Literacy Rate(%)"}.issubset(bangladesh_literacy_df.columns):
+        lita = bangladesh_literacy_df.copy()
+        lita["Year"] = _to_numeric(lita["Year"])
+        lita["Literacy Rate(%)"] = _to_numeric(lita["Literacy Rate(%)"])
+        lita = lita.dropna(subset=["Year", "Literacy Rate(%)"]).sort_values("Year")
+
+        if not lita.empty:
+            fig_lit = px.line(
+                lita,
+                x="Year",
+                y="Literacy Rate(%)",
+                title="Bangladesh literacy rate",
+            )
+            fig_lit.update_traces(
+                mode="lines+markers",
+                hovertemplate="Year: %{x}<br>Literacy Rate: %{y:.2f}%<extra></extra>",
+            )
+            fig_lit.update_layout(margin=dict(l=0, r=0, t=40, b=0))
+            st.plotly_chart(fig_lit, use_container_width=True)
+    else:
+        st.info("Literacy trend skipped. Missing columns: Year, Literacy Rate(%).")
+
     col1, col2 = st.columns(2)
 
     with col1:

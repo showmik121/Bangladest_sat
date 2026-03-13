@@ -15,6 +15,120 @@ st.sidebar.markdown("🌍 Regional Dashboard")
 
 india_df = load_india_data()
 
+# সামগ্রিক ভারতের জন্য হেডার/হিরো সেকশন।
+def _render_india_overall_header(*, plot_df) -> None:
+    st.markdown(
+        """
+        <style>
+        .country-hero {
+            background: #eaf3f1;
+            padding: 32px;
+            border-radius: 16px;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 32px;
+            align-items: start;
+            margin-bottom: 25px;
+        }
+        .country-crumb {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .country-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .country-flag {
+            width: 120px;
+            height: 80px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+        }
+        .country-meta {
+            font-size: 15px;
+            color: #334155;
+            line-height: 1.7;
+        }
+        .country-desc {
+            font-size: 16px;
+            color: #334155;
+            line-height: 1.7;
+        }
+        [data-testid="stMetric"] {
+            background: white;
+            padding: 16px;
+            border-radius: 14px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+        [data-testid="stMetricValue"] {
+            font-size: 30px;
+            font-weight: 700;
+        }
+        @media (prefers-color-scheme: dark) {
+            .country-hero {
+                background: #0b1220;
+                border: 1px solid rgba(148, 163, 184, 0.18);
+            }
+            .country-crumb { color: #94a3b8; }
+            .country-title { color: #e2e8f0; }
+            .country-meta { color: #cbd5f5; }
+            .country-desc { color: #cbd5f5; }
+            .country-meta b { color: #f1f5f9; }
+            [data-testid="stMetric"] {
+                background: #0f172a;
+                box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+                border: 1px solid rgba(148, 163, 184, 0.18);
+            }
+            [data-testid="stMetricValue"] { color: #f8fafc; }
+            [data-testid="stMetricLabel"] { color: #cbd5f5; }
+        }
+        @media (max-width: 900px) {
+            .country-hero { grid-template-columns: 1fr; }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    flag_svg = """
+    <svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+        <rect width="120" height="26.67" y="0" fill="#ff9933"/>
+        <rect width="120" height="26.67" y="26.67" fill="#ffffff"/>
+        <rect width="120" height="26.67" y="53.33" fill="#138808"/>
+        <circle cx="60" cy="40" r="10" fill="#000088"/>
+    </svg>
+    """
+
+    st.markdown(
+        f"""
+        <div class="country-hero">
+            <div>
+                <div class="country-crumb">Countries &nbsp;›&nbsp; India</div>
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;">
+                    <div class="country-flag">{flag_svg}</div>
+                    <div class="country-title">India</div>
+                </div>
+                <div class="country-meta">
+                    <b>Capital:</b> New Delhi<br/>
+                    <b>Continent:</b> Asia<br/>
+                    <b>Region:</b> Southern Asia<br/>
+                    <b>Largest Cities:</b> Delhi, Mumbai, Bengaluru<br/>
+                    <b>Abbreviation:</b> IND
+                </div>
+            </div>
+            <div class="country-desc">
+                India is a diverse South Asian country with rapidly growing urban centers and
+                varied regional development. This dashboard compares states and union territories
+                across population, literacy, poverty, and infrastructure indicators.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 render_country_page(
     country_name="India",
     df=india_df,
@@ -22,4 +136,7 @@ render_country_page(
     lat_column="Latitude",
     lon_column="Longitude",
     overall_label="Overall India",
+    render_overall_header_fn=_render_india_overall_header,
+    title_override="",
+    header_description=None,
 )

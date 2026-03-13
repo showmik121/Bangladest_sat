@@ -12,6 +12,7 @@ INDIA_FILE = "india"
 # BANGLADESH_FILE = "Up_Ban"
 BANGLADESH_FILE = "final_ban"
 BANGLADESH_GDP_FILE = "Gdp"
+BANGLADESH_LITERACY_RATE="litracy"
 
 
 # পরিষ্কার কাস্টম ন্যাভের জন্য Streamlit-এর ডিফল্ট সাইডবার ন্যাভ লুকানো।
@@ -54,6 +55,12 @@ def load_bangladesh_data() -> pd.DataFrame:
 @st.cache_data
 def load_bangladesh_gdp_data() -> pd.DataFrame:
     return load_country_data(BANGLADESH_GDP_FILE, "bd_gdp")
+
+
+# Bangladesh literacy time series loader.
+@st.cache_data
+def load_bangladesh_literacy_data() -> pd.DataFrame:
+    return load_country_data(BANGLADESH_LITERACY_RATE, "bd_literacy")
 
 # সংখ্যার মতো স্ট্রিংকে সংখ্যায় রূপান্তর করে (কমা, স্পেসসহ)।
 def _coerce_numeric(series: pd.Series) -> pd.Series:
