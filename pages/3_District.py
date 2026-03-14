@@ -36,6 +36,23 @@ def _metric_value(row: pd.Series, column: str, default: str = "N/A") -> str:
         return f"{value:.2f}"
     return str(value)
 
+def get_auto_center_zoom(df: pd.DataFrame, lat_col: str, lon_col: str) -> tuple[float, float, int]:
+    if df.empty or lat_col not in df.columns or lon_col not in df.columns:
+        return 23.685, 90.356, 6  # Bangladesh approx center
+
+    lat = _to_numeric(df[lat_col]).dropna()
+    lon = _to_numeric(df[lon_col]).dropna()
+    if lat.empty or lon.empty:
+        return 23.685, 90.356, 6
+    if len(lat) < 2 or len(lon) < 2:
+        return float(lat.mean()), float(lon.mean()), 7
+
+    lat_rng = float(lat.max() - lat.min())
+    lon_rng = float(lon.max() - lon.min())
+    zoom = 7 if lat_rng < 4 else 6
+    if lat_rng < 1.5 or lon_rng < 1.5:
+        zoom = 9
+    return float(lat.mean()), float(lon.mean()), zoom
 
 st.title("District Development Dashboard")
 
@@ -60,6 +77,12 @@ selected_district = st.sidebar.selectbox(
     district_options,
     index=district_options.index(default_district),
 )
+
+# If user selects "All Districts", go back to the division overview page.
+if selected_district == "All Districts":
+    st.session_state["bd_selected_division"] = selected_division
+    st.session_state["bd_selected_district"] = f"Overall {selected_division}"
+    st.switch_page("pages/2_Bangladesh.py")
 
 bubble_size_options = ["population", "population_density", "working_age_pop", "area_km2"]
 bubble_color_options = [
@@ -129,8 +152,18 @@ for column in [
     if column in map_df.columns:
         map_df[column] = _to_numeric(map_df[column])
 
-center_lat = filtered_df["lat"].iloc[0] if "lat" in filtered_df.columns else None
-center_lon = filtered_df["lon"].iloc[0] if "lon" in filtered_df.columns else None
+focus_df = filtered_df if selected_district != "All Districts" else map_df[map_df["division"] == selected_division]
+center_lat, center_lon, auto_zoom = get_auto_center_zoom(focus_df, "lat", "lon")
+
+hover_data = {
+    "Name": True,
+}
+if size_choice in map_df.columns:
+    hover_data[size_choice] = ":.0f"
+if color_choice in map_df.columns:
+    hover_data[color_choice] = ":.2f"
+if "population_density" in map_df.columns:
+    hover_data["population_density"] = ":.0f"
 
 map_fig = px.scatter_mapbox(
     map_df,
@@ -139,14 +172,15 @@ map_fig = px.scatter_mapbox(
     size=size_choice if size_choice in map_df.columns else None,
     color=color_choice if color_choice in map_df.columns else None,
     hover_name="Name",
-    zoom=7 if pd.notna(center_lat) else 4,
-    height=520,
-    mapbox_style="open-street-map",
+    hover_data=hover_data,
+    opacity=0.85,
+    zoom=auto_zoom,
+    center=dict(lat=center_lat, lon=center_lon),
+    height=680,
+    mapbox_style="carto-positron",
     title=f"{selected_district} (Division: {division_name})",
 )
-
-if pd.notna(center_lat) and pd.notna(center_lon):
-    map_fig.update_layout(mapbox=dict(center=dict(lat=center_lat, lon=center_lon)))
+map_fig.update_traces(marker=dict(sizemin=6))
 
 st.plotly_chart(map_fig, use_container_width=True)
 

@@ -13,7 +13,7 @@ INDIA_FILE = "india"
 BANGLADESH_FILE = "final_ban"
 BANGLADESH_GDP_FILE = "Gdp"
 BANGLADESH_LITERACY_RATE="litracy"
-
+DIVISION_POPULATION="population"
 
 # পরিষ্কার কাস্টম ন্যাভের জন্য Streamlit-এর ডিফল্ট সাইডবার ন্যাভ লুকানো।
 def inject_sidebar_style() -> None:
@@ -25,6 +25,10 @@ def inject_sidebar_style() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+
+
 
 def load_country_data(file_path: str, name: str) -> pd.DataFrame:
     try:
@@ -61,6 +65,12 @@ def load_bangladesh_gdp_data() -> pd.DataFrame:
 @st.cache_data
 def load_bangladesh_literacy_data() -> pd.DataFrame:
     return load_country_data(BANGLADESH_LITERACY_RATE, "bd_literacy")
+
+
+# Bangladesh division/city population growth loader.
+@st.cache_data
+def load_bangladesh_population_growth_data() -> pd.DataFrame:
+    return load_country_data(DIVISION_POPULATION, "bd_division_population")
 
 # সংখ্যার মতো স্ট্রিংকে সংখ্যায় রূপান্তর করে (কমা, স্পেসসহ)।
 def _coerce_numeric(series: pd.Series) -> pd.Series:
@@ -246,6 +256,8 @@ def render_country_page(
             title=f"{country_name}: {display_location}",
         )
         st.plotly_chart(fig, use_container_width=True)
+
+
 
     if selected_location == overall_label and render_overall_post_map_fn is not None:
         render_overall_post_map_fn(plot_df=plot_df)

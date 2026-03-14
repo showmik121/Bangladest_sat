@@ -1,18 +1,22 @@
-import pandas as pd
+﻿import pandas as pd
 import plotly.express as px
 import streamlit as st
+import numpy as np
 
 from dashboard_utils import (
     inject_sidebar_style,
     load_bangladesh_data,
     load_bangladesh_gdp_data,
     load_bangladesh_literacy_data,
+    load_bangladesh_population_growth_data,
     render_country_page,
 )
 
-st.set_page_config(page_title="Bangladesh Analytics", page_icon="????", layout="wide")
+st.set_page_config(page_title="Bangladesh Analytics", page_icon="🇧🇩", layout="wide")
 
 inject_sidebar_style()
+
+# ---------- SIDEBAR ----------
 st.sidebar.title("📊 Data Explorer")
 st.sidebar.markdown("Navigation")
 st.sidebar.page_link("app.py", label="Home")
@@ -21,13 +25,12 @@ st.sidebar.page_link("pages/1_India.py", label="India")
 st.sidebar.markdown("---")
 st.sidebar.markdown("🌍 Regional Dashboard")
 
-
-# বাংলাদেশ ডেটা লোড করা
+# ---------- LOAD DATA ----------
 bangladesh_df = load_bangladesh_data()
 bangladesh_gdp_df = load_bangladesh_gdp_data()
 bangladesh_literacy_df = load_bangladesh_literacy_data()
+bangladesh_population_df = load_bangladesh_population_growth_data()
 
-# বাংলাদেশ পেজে নির্দিষ্ট (ম্যানুয়াল) সাইজ/কালার প্যারামিটার ব্যবহার করা হচ্ছে।
 size_params = [
     "population",
     "population_density",
@@ -47,12 +50,14 @@ color_params = [
     "health_index",
 ]
 
-# সংখ্যার মতো মানগুলোকে নিরাপদভাবে সংখ্যায় রূপান্তর করে।
+
+# ---------- HELPERS ----------
 def _to_numeric(series: pd.Series) -> pd.Series:
     cleaned = series.astype(str).str.replace(",", "", regex=False).str.strip()
     return pd.to_numeric(cleaned, errors="coerce")
 
-# বাংলাদেশ ডেটাসেটের জন্য কাস্টম KPI রো।
+
+# ---------- KPI ----------
 def _render_bangladesh_kpis(*, plot_df: pd.DataFrame) -> None:
     districts = plot_df["Name"].dropna().nunique() if "Name" in plot_df.columns else len(plot_df)
     total_population = (
@@ -85,7 +90,7 @@ def _render_bangladesh_kpis(*, plot_df: pd.DataFrame) -> None:
         st.metric("Poverty", f"{avg_poverty:.2f}%")
 
 
-# সামগ্রিক বাংলাদেশ ভিউয়ের জন্য হেডার/হিরো সেকশন।
+# ---------- HERO HEADER ----------
 def _render_bangladesh_overall_header(*, plot_df: pd.DataFrame) -> None:
     st.markdown(
         """
@@ -188,9 +193,7 @@ def _render_bangladesh_overall_header(*, plot_df: pd.DataFrame) -> None:
                 </div>
             </div>
             <div class="country-desc">
-                Bangladesh is a country in South Asia known for the Bengal Delta and the Sundarbans.
-                This dashboard provides district-level analytics for population, education,
-                poverty, infrastructure access, and development indicators.
+                Bangladesh is a country in Asia, known for the Sundarbans mangroves and Bengal Delta. It has a population of nearly 178 million, making it the 8th largest country in the world. Its capital is Dhaka. Bangladesh has a export-oriented economy with strong garment sector.
             </div>
         </div>
         """,
@@ -198,9 +201,7 @@ def _render_bangladesh_overall_header(*, plot_df: pd.DataFrame) -> None:
     )
 
 
-
-
-# সামগ্রিক বাংলাদেশ ভিউয়ের জন্য ন্যাশনাল-লেভেল অ্যানালিটিক্স।
+# ---------- ANALYTICS ----------
 def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
     required_cols = {"Name", "division", "literacy_rate", "population", "poverty_rate"}
     missing = sorted(required_cols - set(plot_df.columns))
@@ -213,15 +214,13 @@ def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
             hide_index=True,
         )
         return
-    
-    
+
     temp = plot_df.copy()
     temp["literacy_rate"] = _to_numeric(temp["literacy_rate"])
     temp["population"] = _to_numeric(temp["population"])
     temp["poverty_rate"] = _to_numeric(temp["poverty_rate"])
 
     st.markdown("---")
-    
 
     st.subheader("Economic Trend")
     k1, k2 = st.columns(2)
@@ -333,15 +332,102 @@ def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
         st.plotly_chart(fig2, use_container_width=True)
 
     st.subheader("Population")
-    top_pop = temp.nlargest(10, "population")
-    fig3 = px.pie(
-        top_pop,
-        values="population",
-        names="Name",
-        title="Population Distribution (Top 10 Districts)",
-        hole=0.4,
-    )
-    st.plotly_chart(fig3, use_container_width=True)
+
+    # ---------------- Map (Full Width) ---------------- #
+    label_col = "division" if "division" in bangladesh_population_df.columns else "city"
+    required_cols = {"latitude", "longitude", "population", "popGrowth", label_col}
+    missing = sorted(required_cols - set(bangladesh_population_df.columns))
+
+    if missing:
+        st.info(f"Population map skipped. Missing columns: {', '.join(missing)}.")
+    else:
+        city_df = bangladesh_population_df.copy()
+        city_df["latitude"] = _to_numeric(city_df["latitude"])
+        city_df["longitude"] = _to_numeric(city_df["longitude"])
+        city_df["population"] = _to_numeric(city_df["population"])
+        city_df["popGrowth"] = _to_numeric(city_df["popGrowth"])
+        city_df = city_df.dropna(subset=["latitude", "longitude", "population", "popGrowth"])
+
+        fig = px.density_mapbox(
+            temp,
+            lat="lat",
+            lon="lon",
+            z=np.log1p(temp["population"]),               # or "popGrowth" if you want growth hotspots
+            radius=36,                    # adjust 15–50 depending on zoom & density
+            zoom=6,
+            center=dict(lat=23.7, lon=90.3),  # Bangladesh center
+            height=650,
+            mapbox_style="carto-positron",
+            color_continuous_scale="YlOrRd",
+            hover_name=temp["Name"],
+            title="Population Hotsports in Bangladesh",
+            opacity=0.85
+         )
+
+
+# Optional second map for growth
+# fig2 = px.density_mapbox(city_df, lat="latitude", lon="longitude", z="popGrowth", ...)
+        fig.update_layout(
+            margin=dict(l=0,r=0,t=40,b=0)
+        )
+        fig.update_coloraxes(colorbar_title="Population Intensity")
+        fig.add_scattermapbox(
+            lat=temp["lat"],
+            lon=temp["lon"],
+            mode="markers+text",
+            text=temp["Name"],
+            textposition="top center",
+            marker=dict(size=8, color="blue"),
+            hovertext=(
+                temp["Name"] +
+                "<br>Population: " + temp["population"].map("{:,}".format) 
+            ),
+
+            name="Name"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ---------------- Row 2: Growth + Pie ---------------- #
+    r2, r3 = st.columns(2)
+
+    with r2:
+        label_col = "division" if "division" in bangladesh_population_df.columns else "city"
+        if {label_col, "popGrowth"}.issubset(bangladesh_population_df.columns):
+            city_df = bangladesh_population_df.copy()
+            city_df["popGrowth"] = _to_numeric(city_df["popGrowth"])
+            city_df = city_df.dropna(subset=["popGrowth"]).sort_values("popGrowth", ascending=False)
+
+            fig = px.bar(
+                city_df,
+                x=label_col,
+                y="popGrowth",
+                color="popGrowth",
+                title="Population Growth Rate",
+                color_continuous_scale="Blues",
+            )
+            fig.update_layout(
+                xaxis_title="Region",
+                yaxis_title="Growth Rate",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info(f"Population growth chart skipped. Missing columns: {label_col}, popGrowth.")
+
+    with r3:
+        if {"Name", "population"}.issubset(temp.columns):
+            top_pop = temp.nlargest(10, "population")
+            fig3 = px.pie(
+                top_pop,
+                values="population",
+                names="Name",
+                title="Population Distribution (Top Districts)",
+                hole=0.45,
+            )
+            fig3.update_traces(textinfo="percent+label")
+            st.plotly_chart(fig3, use_container_width=True)
+        else:
+            st.info("Population pie chart skipped. Missing Name or population column.")
 
     st.subheader("Poverty Analysis")
     top_poor = temp.nlargest(10, "poverty_rate")
@@ -388,11 +474,30 @@ def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
         hide_index=True,
     )
 
-# বাংলাদেশ পেজের মূল চার্ট ও KPI রেন্ডার
-# বাংলাদেশের জন্য কাস্টম বুদ্বুদ (বাবল) ম্যাপ স্টাইলিং।
+
+# ---------- MAP ----------
+def _get_auto_center_zoom(df: pd.DataFrame, lat_col: str, lon_col: str) -> tuple[float, float, int]:
+    if df.empty or lat_col not in df.columns or lon_col not in df.columns:
+        return 23.685, 90.356, 6
+
+    lat = _to_numeric(df[lat_col]).dropna()
+    lon = _to_numeric(df[lon_col]).dropna()
+    if lat.empty or lon.empty:
+        return 23.685, 90.356, 6
+    if len(lat) < 2 or len(lon) < 2:
+        return float(lat.mean()), float(lon.mean()), 7
+
+    lat_rng = float(lat.max() - lat.min())
+    lon_rng = float(lon.max() - lon.min())
+    zoom = 7 if lat_rng < 4 else 6
+    if lat_rng < 1.5 or lon_rng < 1.5:
+        zoom = 9
+    return float(lat.mean()), float(lon.mean()), zoom
+
+
 def render_bangladesh_plot(
     *,
-    plot_df,
+    plot_df: pd.DataFrame,
     primary: str,
     secondary: str,
     lat_column: str,
@@ -400,11 +505,13 @@ def render_bangladesh_plot(
     zoom: int,
     title: str,
 ) -> None:
-    # সেকেন্ডারি প্যারামিটার দেখে কালার স্কেল নির্বাচন
     secondary_l = secondary.lower()
     if any(word in secondary_l for word in ["poverty_rate", "underweight", "stunted"]):
         color_scale = "Reds"
-    elif any(word in secondary_l for word in ["development_score", "literacy_rate", "school_attendance", "edu","health_index"]):
+    elif any(
+        word in secondary_l
+        for word in ["development_score", "literacy_rate", "school_attendance", "edu", "health_index"]
+    ):
         color_scale = "RdYlGn"
     elif any(word in secondary_l for word in ["electricity_access", "tap_water_access", "flush_toilet_access"]):
         color_scale = "YlGn"
@@ -412,6 +519,15 @@ def render_bangladesh_plot(
         color_scale = "Blues"
     else:
         color_scale = "Viridis"
+
+    center_lat, center_lon, auto_zoom = _get_auto_center_zoom(plot_df, lat_column, lon_column)
+    hover_data = {
+        "Name": True,
+        primary: ":.0f",
+        secondary: ":.2f",
+    }
+    if "population_density" in plot_df.columns:
+        hover_data["population_density"] = ":.0f"
 
     fig = px.scatter_mapbox(
         plot_df,
@@ -421,19 +537,23 @@ def render_bangladesh_plot(
         color=secondary,
         size_max=20,
         hover_name="Name",
-        zoom=zoom,
-        height=650,
-        mapbox_style="open-street-map",
+        hover_data=hover_data,
+        opacity=0.85,
+        zoom=auto_zoom,
+        center=dict(lat=center_lat, lon=center_lon),
+        height=680,
+        mapbox_style="carto-positron",
         color_continuous_scale=color_scale,
         title=title,
     )
     fig.update_traces(
         marker=dict(
             opacity=0.8,
+            sizemin=6,
         )
     )
     fig.update_layout(
-        margin=dict(l=0, r=0, t=40, b=0),
+        margin=dict(l=0, r=0, t=30, b=0),
         coloraxis_colorbar=dict(
             title=secondary.replace("_", " ").title(),
         ),
@@ -441,6 +561,7 @@ def render_bangladesh_plot(
     st.plotly_chart(fig, use_container_width=True)
 
 
+# ---------- PAGE ----------
 render_country_page(
     country_name="Bangladesh",
     df=bangladesh_df,
@@ -454,6 +575,7 @@ render_country_page(
     render_plot_fn=render_bangladesh_plot,
     render_overall_post_map_fn=render_bangladesh_overall_analysis,
     render_overall_header_fn=_render_bangladesh_overall_header,
+    render_kpi_fn=_render_bangladesh_kpis,
     navigate_on_subarea_select=True,
     subarea_page_path="pages/3_District.py",
     subarea_state_key="bd_selected_district",
@@ -462,5 +584,4 @@ render_country_page(
     header_description=None,
     map_section_title="Map Section",
     map_section_description="Interactive district bubble map for comparing indicators.",
-    render_kpi_fn=_render_bangladesh_kpis,
 )

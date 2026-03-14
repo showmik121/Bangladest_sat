@@ -2,7 +2,7 @@ import streamlit as st
 
 from dashboard_utils import inject_sidebar_style, load_india_data, render_country_page
 
-st.set_page_config(page_title="India Analytics", page_icon="????", layout="wide")
+st.set_page_config(page_title="India Analytics", page_icon="🇮🇳", layout="wide")
 
 inject_sidebar_style()
 st.sidebar.title("📊 Data Explorer")
