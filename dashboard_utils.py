@@ -5,6 +5,7 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 INDIA_FILE = "india"
@@ -14,6 +15,7 @@ BANGLADESH_FILE = "final_ban"
 BANGLADESH_GDP_FILE = "Gdp"
 BANGLADESH_LITERACY_RATE="litracy"
 DIVISION_POPULATION="population"
+INCOME_SATUS="income"
 
 # পরিষ্কার কাস্টম ন্যাভের জন্য Streamlit-এর ডিফল্ট সাইডবার ন্যাভ লুকানো।
 def inject_sidebar_style() -> None:
@@ -71,6 +73,12 @@ def load_bangladesh_literacy_data() -> pd.DataFrame:
 @st.cache_data
 def load_bangladesh_population_growth_data() -> pd.DataFrame:
     return load_country_data(DIVISION_POPULATION, "bd_division_population")
+
+
+# Income status time series loader.
+@st.cache_data
+def load_income_status_data() -> pd.DataFrame:
+    return load_country_data(INCOME_SATUS, "income_status")
 
 # সংখ্যার মতো স্ট্রিংকে সংখ্যায় রূপান্তর করে (কমা, স্পেসসহ)।
 def _coerce_numeric(series: pd.Series) -> pd.Series:
@@ -261,3 +269,73 @@ def render_country_page(
 
     if selected_location == overall_label and render_overall_post_map_fn is not None:
         render_overall_post_map_fn(plot_df=plot_df)
+
+
+def render_income_status_chart(
+    df: pd.DataFrame,
+    *,
+    selected_countries: list[str] | None = None,
+    title: str = "World Bank Income Classification (1987–2024)",
+) -> go.Figure | None:
+    if df is None or df.empty:
+        return None
+
+    temp = df.copy()
+    if "Year" in temp.columns:
+        temp["Year"] = pd.to_numeric(temp["Year"], errors="coerce")
+        temp = temp.dropna(subset=["Year"]).sort_values("Year").set_index("Year")
+
+    if selected_countries is None:
+        preferred = ["Bangladesh", "India"]
+        selected_countries = [c for c in preferred if c in temp.columns]
+    else:
+        selected_countries = [c for c in selected_countries if c in temp.columns]
+
+    if not selected_countries:
+        return None
+
+    fig = go.Figure()
+    line_colors = {
+        "Bangladesh": "#27ae60",
+        "India": "#3498db",
+    }
+
+    for country in selected_countries:
+        fig.add_trace(
+            go.Scatter(
+                x=temp.index,
+                y=temp[country],
+                name=country,
+                mode="lines+markers",
+                line_shape="hv",
+                line=dict(width=4, color=line_colors.get(country, "#6b7280")),
+                marker=dict(size=8, symbol="diamond"),
+                hovertemplate="<b>Year: %{x}</b><br>Status: %{y}<extra></extra>",
+            )
+        )
+
+    default_order = [
+        "Low-income countries",
+        "Lower-middle-income countries",
+        "Upper-middle-income countries",
+        "High-income countries",
+    ]
+    present = pd.unique(temp[selected_countries].values.ravel())
+    category_order = [c for c in default_order if c in present]
+
+    fig.update_layout(
+        title=f"<b>{title}</b>",
+        xaxis_title="Year",
+        yaxis_title="Economic Classification",
+        height=500,
+        showlegend=True,
+    )
+    if category_order:
+        fig.update_layout(
+            yaxis=dict(
+                categoryorder="array",
+                categoryarray=category_order,
+            )
+        )
+
+    return fig

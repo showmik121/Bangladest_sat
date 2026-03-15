@@ -9,6 +9,8 @@ from dashboard_utils import (
     load_bangladesh_gdp_data,
     load_bangladesh_literacy_data,
     load_bangladesh_population_growth_data,
+    load_income_status_data,
+    render_income_status_chart,
     render_country_page,
 )
 
@@ -30,6 +32,7 @@ bangladesh_df = load_bangladesh_data()
 bangladesh_gdp_df = load_bangladesh_gdp_data()
 bangladesh_literacy_df = load_bangladesh_literacy_data()
 bangladesh_population_df = load_bangladesh_population_growth_data()
+income_status_df = load_income_status_data()
 
 size_params = [
     "population",
@@ -281,6 +284,36 @@ def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
                 )
                 fig_inflation.update_layout(margin=dict(l=0, r=0, t=40, b=0))
                 st.plotly_chart(fig_inflation, use_container_width=True)
+
+    
+    st.markdown("#### 🏦 World Bank Income Classification")
+
+    if {"Year", "Bangladesh"}.issubset(income_status_df.columns):
+    # চার্ট রেন্ডার করা
+        fig_income = render_income_status_chart(
+        income_status_df,
+        selected_countries=["Bangladesh"],
+        title="Income Classification Journey (1987–2024)",
+        )
+    
+    if fig_income:
+        fig_income.update_layout(margin=dict(l=0, r=0, t=40, b=0))
+        st.plotly_chart(fig_income, use_container_width=True)
+        
+        # --- প্রফেশনাল অটোমেটিক ইনসাইট ---
+        # ২০১৪ সালে স্ট্যাটাস পরিবর্তনের বছরটি খুঁজে বের করা
+        transition_year = income_status_df[
+            income_status_df['Bangladesh'] == 'Lower-middle-income countries'
+        ]['Year'].min()
+        
+        if pd.notna(transition_year):
+            st.success(f"**Key Milestone:** Bangladesh transitioned to **Lower-middle-income** status in **{int(transition_year)}**.")
+        else:
+            st.info("Income classification data is empty.")
+    else:
+        st.warning("⚠️ Data missing: Ensure 'Year' and 'Bangladesh' columns are present in the dataset.")
+    
+    
 
     st.subheader("Education Insights")
     if {"Year", "Literacy Rate(%)"}.issubset(bangladesh_literacy_df.columns):
