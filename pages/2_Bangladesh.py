@@ -18,6 +18,82 @@ st.set_page_config(page_title="Bangladesh Analytics", page_icon="🇧🇩", layo
 
 inject_sidebar_style()
 
+# ---------- THEME (DARK) ----------
+st.markdown(
+    """
+    <style>
+    :root {
+        --brand-green: #2ECC71;
+        --brand-red: #E74C3C;
+        --brand-blue: #3498DB;
+        --brand-dark: #0b1220;
+        --brand-card: #0f172a;
+        --brand-text: #e2e8f0;
+        --brand-muted: #94a3b8;
+    }
+    .section-header {
+        font-size: 22px;
+        font-weight: 600;
+        border-left: 5px solid var(--brand-green);
+        padding-left: 14px;
+        margin-top: 18px;
+        margin-bottom: 16px;
+        color: var(--brand-text);
+        letter-spacing: 0.2px;
+    }
+    .premium-card {
+        background: var(--brand-card);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 16px;
+        padding: 16px 18px;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+        margin-bottom: 16px;
+    }
+    .premium-card h4 {
+        margin: 0 0 10px 0;
+        color: var(--brand-text);
+        font-weight: 600;
+    }
+    [data-testid="stAppViewContainer"] {
+        background: radial-gradient(1200px 600px at 10% -10%, rgba(46,204,113,0.15), transparent 60%),
+                    radial-gradient(900px 500px at 100% 0%, rgba(52,152,219,0.18), transparent 55%),
+                    var(--brand-dark);
+    }
+    [data-testid="stSidebar"] {
+        background: #0a0f1c;
+        border-right: 1px solid rgba(148, 163, 184, 0.15);
+    }
+    [data-testid="stMarkdownContainer"] p, 
+    [data-testid="stMarkdownContainer"] span,
+    [data-testid="stMarkdownContainer"] li,
+    [data-testid="stMarkdownContainer"] h1,
+    [data-testid="stMarkdownContainer"] h2,
+    [data-testid="stMarkdownContainer"] h3,
+    [data-testid="stMarkdownContainer"] h4 {
+        color: var(--brand-text);
+    }
+    .stTabs [role="tablist"] {
+        background: rgba(15, 23, 42, 0.65);
+        border-radius: 12px;
+        padding: 6px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .stTabs [role="tab"] {
+        color: var(--brand-muted);
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 8px 14px;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #0b1220 !important;
+        background: linear-gradient(120deg, #2ECC71, #38bdf8);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # ---------- SIDEBAR ----------
 st.sidebar.title("📊 Data Explorer")
 st.sidebar.markdown("Navigation")
@@ -56,12 +132,14 @@ color_params = [
 
 # ---------- HELPERS ----------
 def _to_numeric(series: pd.Series) -> pd.Series:
+    # স্ট্রিং থেকে নিরাপদভাবে সংখ্যায় রূপান্তর করে
     cleaned = series.astype(str).str.replace(",", "", regex=False).str.strip()
     return pd.to_numeric(cleaned, errors="coerce")
 
 
 # ---------- KPI ----------
 def _render_bangladesh_kpis(*, plot_df: pd.DataFrame) -> None:
+    # বাংলাদেশ কিপিআই কার্ডগুলো রেন্ডার করে
     districts = plot_df["Name"].dropna().nunique() if "Name" in plot_df.columns else len(plot_df)
     total_population = (
         _to_numeric(plot_df["population"]).fillna(0).sum()
@@ -95,6 +173,7 @@ def _render_bangladesh_kpis(*, plot_df: pd.DataFrame) -> None:
 
 # ---------- HERO HEADER ----------
 def _render_bangladesh_overall_header(*, plot_df: pd.DataFrame) -> None:
+    # বাংলাদেশ ড্যাশবোর্ডের হিরো হেডার রেন্ডার করে
     st.markdown(
         """
         <style>
@@ -206,6 +285,7 @@ def _render_bangladesh_overall_header(*, plot_df: pd.DataFrame) -> None:
 
 # ---------- ANALYTICS ----------
 def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
+    # বাংলাদেশ জাতীয় অ্যানালিটিক্স সেকশন রেন্ডার করে
     required_cols = {"Name", "division", "literacy_rate", "population", "poverty_rate"}
     missing = sorted(required_cols - set(plot_df.columns))
     if missing:
@@ -225,291 +305,324 @@ def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
 
     st.markdown("---")
 
-    st.subheader("Economic Trend")
-    k1, k2 = st.columns(2)
+    tab1, tab2, tab3 = st.tabs(["💰 Economy", "🎓 Education & Poverty", "👥 Population"])
 
-    with k1:
-        st.markdown("#### Bangladesh GDP Trend (Line Graph)")
-        gdp_required_cols = {"Country Name", "Year", "GDP"}
-        gdp_missing = sorted(gdp_required_cols - set(bangladesh_gdp_df.columns))
-        if gdp_missing:
-            st.info(f"GDP trend skipped. Missing columns: {', '.join(gdp_missing)}.")
-        else:
-            gdp_temp = bangladesh_gdp_df.copy()
-            gdp_temp = gdp_temp[gdp_temp["Country Name"].astype(str).str.strip() == "Bangladesh"]
-            gdp_temp["Year"] = _to_numeric(gdp_temp["Year"])
-            gdp_temp["GDP"] = _to_numeric(gdp_temp["GDP"])
-            gdp_temp = gdp_temp.dropna(subset=["Year", "GDP"]).sort_values("Year")
+    with tab1:
+        st.markdown('<div class="section-header">Economic Performance & Market Stability</div>', unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
 
-            if gdp_temp.empty:
-                st.info("GDP trend skipped. No Bangladesh records found.")
+        with c1:
+            st.markdown('<div class="premium-card"><h4>Bangladesh GDP Trend</h4>', unsafe_allow_html=True)
+            gdp_required_cols = {"Country Name", "Year", "GDP"}
+            gdp_missing = sorted(gdp_required_cols - set(bangladesh_gdp_df.columns))
+            if gdp_missing:
+                st.info(f"GDP trend skipped. Missing columns: {', '.join(gdp_missing)}.")
             else:
-                fig_gdp = px.line(
-                    gdp_temp,
-                    x="Year",
-                    y="GDP",
-                    markers=True,
-                    hover_name="Country Name",
-                    title="Bangladesh GDP Over Time",
-                )
-                fig_gdp.update_layout(margin=dict(l=0, r=0, t=40, b=0))
-                st.plotly_chart(fig_gdp, use_container_width=True)
+                gdp_temp = bangladesh_gdp_df.copy()
+                gdp_temp = gdp_temp[gdp_temp["Country Name"].astype(str).str.strip() == "Bangladesh"]
+                gdp_temp["Year"] = _to_numeric(gdp_temp["Year"])
+                gdp_temp["GDP"] = _to_numeric(gdp_temp["GDP"])
+                gdp_temp = gdp_temp.dropna(subset=["Year", "GDP"]).sort_values("Year")
 
-    with k2:
-        st.markdown("#### Bangladesh Inflation Rate (Line Graph)")
-        inflation_required_cols = {"Year", "Inflation Rate (%)"}
-        inflation_missing = sorted(inflation_required_cols - set(bangladesh_literacy_df.columns))
-        if inflation_missing:
-            st.info(f"Inflation trend skipped. Missing columns: {', '.join(inflation_missing)}.")
-        else:
-            lita = bangladesh_literacy_df.copy()
-            lita["Year"] = _to_numeric(lita["Year"])
-            lita["Inflation Rate (%)"] = _to_numeric(lita["Inflation Rate (%)"])
-            lita = lita.dropna(subset=["Year", "Inflation Rate (%)"]).sort_values("Year")
+                if gdp_temp.empty:
+                    st.info("GDP trend skipped. No Bangladesh records found.")
+                else:
+                    fig_gdp = px.line(
+                        gdp_temp,
+                        x="Year",
+                        y="GDP",
+                        markers=True,
+                        hover_name="Country Name",
+                        title=None,
+                        height=330,
+                    )
+                    fig_gdp.update_traces(line=dict(color="#3498DB"), marker=dict(color="#3498DB"))
+                    fig_gdp.update_layout(margin=dict(l=0, r=0, t=10, b=0), template="plotly_dark")
+                    st.plotly_chart(fig_gdp, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-            if lita.empty:
-                st.info("Inflation trend skipped. No records found.")
+        with c2:
+            st.markdown('<div class="premium-card"><h4>Inflation Rate</h4>', unsafe_allow_html=True)
+            inflation_required_cols = {"Year", "Inflation Rate (%)"}
+            inflation_missing = sorted(inflation_required_cols - set(bangladesh_literacy_df.columns))
+            if inflation_missing:
+                st.info(f"Inflation trend skipped. Missing columns: {', '.join(inflation_missing)}.")
             else:
-                fig_inflation = px.line(
-                    lita,
-                    x="Year",
-                    y="Inflation Rate (%)",
-                    title="Bangladesh Inflation rate",
-                )
-                fig_inflation.update_traces(
-                    mode="lines+markers",
-                    line=dict(color="#f97316"),
-                    marker=dict(color="#f97316"),
-                    hovertemplate="Year: %{x}<br>Inflation Rate: %{y:.2f}%<extra></extra>",
-                )
-                fig_inflation.update_layout(margin=dict(l=0, r=0, t=40, b=0))
-                st.plotly_chart(fig_inflation, use_container_width=True)
+                lita = bangladesh_literacy_df.copy()
+                lita["Year"] = _to_numeric(lita["Year"])
+                lita["Inflation Rate (%)"] = _to_numeric(lita["Inflation Rate (%)"])
+                lita = lita.dropna(subset=["Year", "Inflation Rate (%)"]).sort_values("Year")
 
-    
-    st.markdown("#### 🏦 World Bank Income Classification")
+                if lita.empty:
+                    st.info("Inflation trend skipped. No records found.")
+                else:
+                    fig_inflation = px.line(
+                        lita,
+                        x="Year",
+                        y="Inflation Rate (%)",
+                        title=None,
+                        height=330,
+                    )
+                    fig_inflation.update_traces(
+                        mode="lines+markers",
+                        line=dict(color="#E74C3C"),
+                        marker=dict(color="#E74C3C"),
+                        hovertemplate="Year: %{x}<br>Inflation Rate: %{y:.2f}%<extra></extra>",
+                    )
+                    fig_inflation.update_layout(margin=dict(l=0, r=0, t=10, b=0), template="plotly_dark")
+                    st.plotly_chart(fig_inflation, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    if {"Year", "Bangladesh"}.issubset(income_status_df.columns):
-    # চার্ট রেন্ডার করা
-        fig_income = render_income_status_chart(
-        income_status_df,
-        selected_countries=["Bangladesh"],
-        title="Income Classification Journey (1987–2024)",
-        )
+        st.markdown('<div class="premium-card" style="margin-bottom: 25px;"><h4>World Bank Income Classification</h4></div>', unsafe_allow_html=True)
     
-    if fig_income:
-        fig_income.update_layout(margin=dict(l=0, r=0, t=40, b=0))
-        st.plotly_chart(fig_income, use_container_width=True)
-        
-        # --- প্রফেশনাল অটোমেটিক ইনসাইট ---
-        # ২০১৪ সালে স্ট্যাটাস পরিবর্তনের বছরটি খুঁজে বের করা
-        transition_year = income_status_df[
-            income_status_df['Bangladesh'] == 'Lower-middle-income countries'
-        ]['Year'].min()
-        
-        if pd.notna(transition_year):
-            st.success(f"**Key Milestone:** Bangladesh transitioned to **Lower-middle-income** status in **{int(transition_year)}**.")
+        fig_income = None
+        if {"Year", "Bangladesh"}.issubset(income_status_df.columns):
+            fig_income = render_income_status_chart(
+                income_status_df,
+                selected_countries=["Bangladesh"],
+                title="Income Classification Journey (1987–2024)",
+            )
+
+        if fig_income is not None:
+            fig_income.update_layout(margin=dict(l=0, r=0, t=60, b=0), template="plotly_dark")
+            title_pad=dict(t=10, b=10)
+            st.plotly_chart(fig_income, use_container_width=True)
+
+            transition_year = income_status_df[
+                income_status_df["Bangladesh"] == "Lower-middle-income countries"
+            ]["Year"].min()
+            if pd.notna(transition_year):
+                st.success(
+                    f"**Key Milestone:** Bangladesh transitioned to **Lower-middle-income** status in **{int(transition_year)}**."
+                )
+            else:
+                st.info("Income classification data is empty.")
         else:
-            st.info("Income classification data is empty.")
-    else:
-        st.warning("⚠️ Data missing: Ensure 'Year' and 'Bangladesh' columns are present in the dataset.")
-    
-    
+            st.warning("⚠️ Data missing: Ensure 'Year' and 'Bangladesh' columns are present in the dataset.")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.subheader("Education Insights")
-    if {"Year", "Literacy Rate(%)"}.issubset(bangladesh_literacy_df.columns):
-        lita = bangladesh_literacy_df.copy()
-        lita["Year"] = _to_numeric(lita["Year"])
-        lita["Literacy Rate(%)"] = _to_numeric(lita["Literacy Rate(%)"])
-        lita = lita.dropna(subset=["Year", "Literacy Rate(%)"]).sort_values("Year")
+    with tab2:
+        st.markdown('<div class="section-header">Education & Poverty Lens</div>', unsafe_allow_html=True)
+        c3, c4 = st.columns(2)
 
-        if not lita.empty:
-            fig_lit = px.line(
-                lita,
-                x="Year",
-                y="Literacy Rate(%)",
-                title="Bangladesh literacy rate",
+        with c3:
+            st.markdown('<div class="premium-card"><h4>Literacy Trend</h4>', unsafe_allow_html=True)
+            if {"Year", "Literacy Rate(%)"}.issubset(bangladesh_literacy_df.columns):
+                lita = bangladesh_literacy_df.copy()
+                lita["Year"] = _to_numeric(lita["Year"])
+                lita["Literacy Rate(%)"] = _to_numeric(lita["Literacy Rate(%)"])
+                lita = lita.dropna(subset=["Year", "Literacy Rate(%)"]).sort_values("Year")
+
+                if not lita.empty:
+                    fig_lit = px.line(
+                        lita,
+                        x="Year",
+                        y="Literacy Rate(%)",
+                        title=None,
+                        height=330,
+                    )
+                    fig_lit.update_traces(
+                        mode="lines+markers",
+                        line=dict(color="#2ECC71"),
+                        marker=dict(color="#2ECC71"),
+                        hovertemplate="Year: %{x}<br>Literacy Rate: %{y:.2f}%<extra></extra>",
+                    )
+                    fig_lit.update_layout(margin=dict(l=0, r=0, t=10, b=0), template="plotly_dark")
+                    st.plotly_chart(fig_lit, use_container_width=True)
+            else:
+                st.info("Literacy trend skipped. Missing columns: Year, Literacy Rate(%).")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with c4:
+            st.markdown('<div class="premium-card"><h4>Poverty Hotspots</h4>', unsafe_allow_html=True)
+            top_poor = temp.nlargest(10, "poverty_rate")
+            fig4 = px.bar(
+                top_poor,
+                x="Name",
+                y="poverty_rate",
+                title=None,
+                color="poverty_rate",
+                color_continuous_scale=["#E74C3C", "#F39C12"],
+                height=330,
             )
-            fig_lit.update_traces(
-                mode="lines+markers",
-                hovertemplate="Year: %{x}<br>Literacy Rate: %{y:.2f}%<extra></extra>",
+            fig4.update_layout(margin=dict(l=0, r=0, t=10, b=0), template="plotly_dark")
+            st.plotly_chart(fig4, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        c5, c6 = st.columns(2)
+        with c5:
+            st.markdown('<div class="premium-card"><h4>Top Literacy Districts</h4>', unsafe_allow_html=True)
+            top_lit = temp.nlargest(10, "literacy_rate")
+            fig1 = px.bar(
+                top_lit,
+                x="Name",
+                y="literacy_rate",
+                title=None,
+                color="literacy_rate",
+                color_continuous_scale=["#2ECC71", "#9AE6B4"],
+                height=330,
             )
-            fig_lit.update_layout(margin=dict(l=0, r=0, t=40, b=0))
-            st.plotly_chart(fig_lit, use_container_width=True)
-    else:
-        st.info("Literacy trend skipped. Missing columns: Year, Literacy Rate(%).")
+            fig1.update_layout(margin=dict(l=0, r=0, t=10, b=0), template="plotly_dark")
+            st.plotly_chart(fig1, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
+        with c6:
+            st.markdown('<div class="premium-card"><h4>Lowest Literacy Districts</h4>', unsafe_allow_html=True)
+            low_lit = temp.nsmallest(10, "literacy_rate")
+            fig2 = px.bar(
+                low_lit,
+                x="Name",
+                y="literacy_rate",
+                title=None,
+                color="literacy_rate",
+                color_continuous_scale=["#E74C3C", "#F7B7A3"],
+                height=330,
+            )
+            fig2.update_layout(margin=dict(l=0, r=0, t=10, b=0), template="plotly_dark")
+            st.plotly_chart(fig2, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    with col1:
-        top_lit = temp.nlargest(10, "literacy_rate")
-        fig1 = px.bar(
-            top_lit,
-            x="Name",
-            y="literacy_rate",
-            title="Top 10 Literacy Districts",
-            color="literacy_rate",
-            color_continuous_scale="Greens",
+        st.markdown('<div class="premium-card"><h4>Division Averages: Literacy vs Poverty</h4>', unsafe_allow_html=True)
+        division_summary = (
+            temp.groupby("division")[["literacy_rate", "poverty_rate"]]
+            .mean()
+            .reset_index()
+            .sort_values("division")
         )
-        st.plotly_chart(fig1, use_container_width=True)
-
-    with col2:
-        low_lit = temp.nsmallest(10, "literacy_rate")
-        fig2 = px.bar(
-            low_lit,
-            x="Name",
-            y="literacy_rate",
-            title="Lowest Literacy Districts",
-            color="literacy_rate",
-            color_continuous_scale="Reds",
+        division_long = division_summary.melt(
+            id_vars="division",
+            value_vars=["literacy_rate", "poverty_rate"],
+            var_name="Metric",
+            value_name="Value",
         )
-        st.plotly_chart(fig2, use_container_width=True)
-
-    st.subheader("Population")
-
-    # ---------------- Map (Full Width) ---------------- #
-    label_col = "division" if "division" in bangladesh_population_df.columns else "city"
-    required_cols = {"latitude", "longitude", "population", "popGrowth", label_col}
-    missing = sorted(required_cols - set(bangladesh_population_df.columns))
-
-    if missing:
-        st.info(f"Population map skipped. Missing columns: {', '.join(missing)}.")
-    else:
-        city_df = bangladesh_population_df.copy()
-        city_df["latitude"] = _to_numeric(city_df["latitude"])
-        city_df["longitude"] = _to_numeric(city_df["longitude"])
-        city_df["population"] = _to_numeric(city_df["population"])
-        city_df["popGrowth"] = _to_numeric(city_df["popGrowth"])
-        city_df = city_df.dropna(subset=["latitude", "longitude", "population", "popGrowth"])
-
-        fig = px.density_mapbox(
-            temp,
-            lat="lat",
-            lon="lon",
-            z=np.log1p(temp["population"]),               # or "popGrowth" if you want growth hotspots
-            radius=36,                    # adjust 15–50 depending on zoom & density
-            zoom=6,
-            center=dict(lat=23.7, lon=90.3),  # Bangladesh center
-            height=650,
-            mapbox_style="carto-positron",
-            color_continuous_scale="YlOrRd",
-            hover_name=temp["Name"],
-            title="Population Hotsports in Bangladesh",
-            opacity=0.85
-         )
-
-
-# Optional second map for growth
-# fig2 = px.density_mapbox(city_df, lat="latitude", lon="longitude", z="popGrowth", ...)
-        fig.update_layout(
-            margin=dict(l=0,r=0,t=40,b=0)
+        division_long["Metric"] = division_long["Metric"].str.replace("_", " ").str.title()
+        fig_division = px.bar(
+            division_long,
+            x="division",
+            y="Value",
+            color="Metric",
+            barmode="group",
+            title=None,
+            height=360,
         )
-        fig.update_coloraxes(colorbar_title="Population Intensity")
-        fig.add_scattermapbox(
-            lat=temp["lat"],
-            lon=temp["lon"],
-            mode="markers+text",
-            text=temp["Name"],
-            textposition="top center",
-            marker=dict(size=8, color="blue"),
-            hovertext=(
-                temp["Name"] +
-                "<br>Population: " + temp["population"].map("{:,}".format) 
-            ),
+        fig_division.update_layout(margin=dict(l=0, r=0, t=10, b=0), template="plotly_dark")
+        st.plotly_chart(fig_division, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-            name="Name"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-    # ---------------- Row 2: Growth + Pie ---------------- #
-    r2, r3 = st.columns(2)
-
-    with r2:
+    with tab3:
+        st.markdown('<div class="section-header">Demographic Distribution</div>', unsafe_allow_html=True)
+        st.markdown('<div class="premium-card"><h4>Population Hotspots</h4>', unsafe_allow_html=True)
         label_col = "division" if "division" in bangladesh_population_df.columns else "city"
-        if {label_col, "popGrowth"}.issubset(bangladesh_population_df.columns):
+        required_cols = {"latitude", "longitude", "population", "popGrowth", label_col}
+        missing = sorted(required_cols - set(bangladesh_population_df.columns))
+
+        if missing:
+            st.info(f"Population map skipped. Missing columns: {', '.join(missing)}.")
+        else:
             city_df = bangladesh_population_df.copy()
+            city_df["latitude"] = _to_numeric(city_df["latitude"])
+            city_df["longitude"] = _to_numeric(city_df["longitude"])
+            city_df["population"] = _to_numeric(city_df["population"])
             city_df["popGrowth"] = _to_numeric(city_df["popGrowth"])
-            city_df = city_df.dropna(subset=["popGrowth"]).sort_values("popGrowth", ascending=False)
+            city_df = city_df.dropna(subset=["latitude", "longitude", "population", "popGrowth"])
 
-            fig = px.bar(
-                city_df,
-                x=label_col,
-                y="popGrowth",
-                color="popGrowth",
-                title="Population Growth Rate",
-                color_continuous_scale="Blues",
+            fig = px.density_mapbox(
+                temp,
+                lat="lat",
+                lon="lon",
+                z=np.log1p(temp["population"]),
+                radius=36,
+                zoom=6,
+                center=dict(lat=23.7, lon=90.3),
+                height=520,
+                mapbox_style="carto-positron",
+                color_continuous_scale="YlOrRd",
+                hover_name=temp["Name"],
+                title=None,
+                opacity=0.85,
             )
-            fig.update_layout(
-                xaxis_title="Region",
-                yaxis_title="Growth Rate",
+
+            fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), template="plotly_dark")
+            fig.update_coloraxes(colorbar_title="Population Intensity")
+            fig.add_scattermapbox(
+                lat=temp["lat"],
+                lon=temp["lon"],
+                mode="markers+text",
+                text=temp["Name"],
+                textposition="top center",
+                marker=dict(size=8, color="#3838f8"),
+                hovertext=(
+                    temp["Name"]
+                    + "<br>Population: "
+                    + temp["population"].map("{:,}".format)
+                ),
+                name="Name",
             )
+
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info(f"Population growth chart skipped. Missing columns: {label_col}, popGrowth.")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    with r3:
-        if {"Name", "population"}.issubset(temp.columns):
-            top_pop = temp.nlargest(10, "population")
-            fig3 = px.pie(
-                top_pop,
-                values="population",
-                names="Name",
-                title="Population Distribution (Top Districts)",
-                hole=0.45,
-            )
-            fig3.update_traces(textinfo="percent+label")
-            st.plotly_chart(fig3, use_container_width=True)
-        else:
-            st.info("Population pie chart skipped. Missing Name or population column.")
+        r2, r3 = st.columns(2)
+        with r2:
+            st.markdown('<div class="premium-card"><h4>Population Growth Rate</h4>', unsafe_allow_html=True)
+            label_col = "division" if "division" in bangladesh_population_df.columns else "city"
+            if {label_col, "popGrowth"}.issubset(bangladesh_population_df.columns):
+                city_df = bangladesh_population_df.copy()
+                city_df["popGrowth"] = _to_numeric(city_df["popGrowth"])
+                city_df = city_df.dropna(subset=["popGrowth"]).sort_values("popGrowth", ascending=False)
 
-    st.subheader("Poverty Analysis")
-    top_poor = temp.nlargest(10, "poverty_rate")
-    fig4 = px.bar(
-        top_poor,
-        x="Name",
-        y="poverty_rate",
-        title="Top 10 Poorest Districts",
-        color="poverty_rate",
-        color_continuous_scale="Purples",
-    )
-    st.plotly_chart(fig4, use_container_width=True)
+                fig = px.bar(
+                    city_df,
+                    x=label_col,
+                    y="popGrowth",
+                    color="popGrowth",
+                    title=None,
+                    color_continuous_scale=["#3498DB", "#38bdf8"],
+                    height=330,
+                )
+                fig.update_layout(
+                    xaxis_title="Region",
+                    yaxis_title="Growth Rate",
+                    margin=dict(l=0, r=0, t=10, b=0),
+                    template="plotly_dark",
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info(f"Population growth chart skipped. Missing columns: {label_col}, popGrowth.")
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    st.subheader("Regional Comparison")
-    st.markdown("### Division Averages (Literacy vs Poverty)")
-    division_summary = (
-        temp.groupby("division")[["literacy_rate", "poverty_rate"]]
-        .mean()
-        .reset_index()
-        .sort_values("division")
-    )
-    division_long = division_summary.melt(
-        id_vars="division",
-        value_vars=["literacy_rate", "poverty_rate"],
-        var_name="Metric",
-        value_name="Value",
-    )
-    division_long["Metric"] = division_long["Metric"].str.replace("_", " ").str.title()
-    fig_division = px.bar(
-        division_long,
-        x="division",
-        y="Value",
-        color="Metric",
-        barmode="group",
-        title="Division Averages: Literacy vs Poverty",
-    )
-    fig_division.update_layout(margin=dict(l=0, r=0, t=40, b=0))
-    st.plotly_chart(fig_division, use_container_width=True)
+        with r3:
+            st.markdown('<div class="premium-card"><h4>Population Distribution</h4>', unsafe_allow_html=True)
+            if {"Name", "population"}.issubset(temp.columns):
+                top_pop = temp.nlargest(10, "population")
+                fig3 = px.pie(
+                    top_pop,
+                    values="population",
+                    names="Name",
+                    title=None,
+                    hole=0.45,
+                    height=330,
+                    color_discrete_sequence=["#2ECC71", "#38bdf8", "#f59e0b", "#ef4444", "#a855f7"],
+                )
+                fig3.update_traces(textinfo="percent+label")
+                fig3.update_layout(margin=dict(l=0, r=0, t=10, b=0), template="plotly_dark")
+                st.plotly_chart(fig3, use_container_width=True)
+            else:
+                st.info("Population pie chart skipped. Missing Name or population column.")
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    st.subheader("Data Table")
-    st.dataframe(
-        temp.sort_values("Name"),
-        use_container_width=True,
-        hide_index=True,
-    )
+        st.markdown('<div class="premium-card"><h4>Data Table</h4>', unsafe_allow_html=True)
+        st.dataframe(
+            temp.sort_values("Name"),
+            use_container_width=True,
+            hide_index=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ---------- MAP ----------
 def _get_auto_center_zoom(df: pd.DataFrame, lat_col: str, lon_col: str) -> tuple[float, float, int]:
+    # ম্যাপের জন্য সেন্টার ও জুম স্বয়ংক্রিয়ভাবে নির্ধারণ করে
     if df.empty or lat_col not in df.columns or lon_col not in df.columns:
         return 23.685, 90.356, 6
 
@@ -538,6 +651,7 @@ def render_bangladesh_plot(
     zoom: int,
     title: str,
 ) -> None:
+    # বাংলাদেশ ম্যাপ‑ভিত্তিক প্লট রেন্ডার করে
     secondary_l = secondary.lower()
     if any(word in secondary_l for word in ["poverty_rate", "underweight", "stunted"]):
         color_scale = "Reds"
