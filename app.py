@@ -1,10 +1,14 @@
-import pandas as pd
+﻿import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from dashboard_utils import (
     inject_sidebar_style,
     load_income_status_data,
 )
+
+total_indicators = 22  # Update later if indicator list becomes dynamic
+year_range = "1987–2024"
+total_districts = 64 + 36
 
 st.set_page_config(
     page_title="Regional Development Intelligence Dashboard",
@@ -19,35 +23,82 @@ inject_sidebar_style()
 st.markdown(
     """
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Spline+Sans:wght@400;500;600;700&display=swap');
 :root {
-    --bd-green: #006a4e;
-    --bd-red: #f42a41;
-    --in-saffron: #ff9933;
-    --in-navy: #000080;
-    --in-green: #138808;
-    --ink: #0f172a;
-    --muted: #64748b;
+    --bd-green: #22c55e;
+    --bd-red: #f43f5e;
+    --in-saffron: #ffb454;
+    --in-navy: #1e3a8a;
+    --in-green: #34d399;
+    --ink: #e2e8f0;
+    --muted: #94a3b8;
+    --paper: #0b1220;
+    --card: rgba(15, 23, 42, 0.85);
+    --accent: #60a5fa;
+    --accent-2: #38bdf8;
 }
-body { color: var(--ink); }
-h1 { color: var(--ink); }
-.hero {
-    background: linear-gradient(135deg, rgba(0,106,78,0.95), rgba(255,153,51,0.92));
-    border-radius: 22px;
-    padding: 42px 48px;
-    color: white;
-    text-align: left;
-    box-shadow: 0 18px 40px rgba(2, 6, 23, 0.18);
-    margin: 10px 0 28px 0;
+html, body, [class*="css"]  {
+    font-family: "Spline Sans", system-ui, -apple-system, sans-serif;
 }
-.hero-title {
-    font-size: 40px;
-    font-weight: 800;
+body {
+    color: var(--ink);
+    background: radial-gradient(900px 420px at 10% -20%, rgba(14, 116, 144, 0.35), transparent 60%),
+        radial-gradient(800px 400px at 90% 0%, rgba(15, 118, 110, 0.35), transparent 55%),
+        #0b1220;
+}
+h1, h2, h3, h4 {
+    font-family: "Fraunces", "Times New Roman", serif;
+    color: var(--ink);
     letter-spacing: 0.2px;
 }
+.block-container { padding-top: 2.2rem; }
+.hero {
+    background: linear-gradient(135deg, rgba(12, 18, 32, 0.98), rgba(15, 23, 42, 0.96));
+    border-radius: 26px;
+    padding: 44px 48px;
+    color: white;
+    text-align: left;
+    box-shadow: 0 22px 50px rgba(2, 6, 23, 0.2);
+    margin: 10px 0 28px 0;
+    position: relative;
+    overflow: hidden;
+}
+.hero-title {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    margin-bottom: 8px;
+}
 .hero-subtitle {
-    font-size: 18px;
-    opacity: 0.95;
-    max-width: 720px;
+    font-size: 17px;
+    opacity: 0.92;
+    max-width: 700px;
+    line-height: 1.65;
+}
+.hero-accent {
+    width: 72px;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(96, 165, 250, 0.9), rgba(34, 197, 94, 0.9));
+    margin: 14px 0 16px 0;
+    box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
+}
+.hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+.hero-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.18);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    font-size: 12px;
+    font-weight: 600;
 }
 .hero-pill {
     display: inline-block;
@@ -57,21 +108,68 @@ h1 { color: var(--ink); }
     font-weight: 600;
     font-size: 12px;
     margin-bottom: 10px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
 }
+.hero-grid {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 22px;
+    align-items: center;
+}
+.hero-panel {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 18px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.hero-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    margin-bottom: 10px;
+}
+.hero-metric:last-child { margin-bottom: 0; }
+.hero-metric strong { font-size: 16px; }
+.hero-metric span { font-size: 12px; opacity: 0.85; }
 .card {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--card);
     border: 1px solid rgba(15, 23, 42, 0.06);
-    border-radius: 16px;
+    border-radius: 18px;
     padding: 18px 18px 14px 18px;
     box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 .card-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
 .card-sub { color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+.section-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+.section-title {
+    font-size: 30px;
+    font-weight: 800;
+    margin: 6px 0 8px 0;
+}
+.section-sub {
+    color: var(--muted);
+    max-width: 760px;
+    line-height: 1.6;
+}
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 .kpi-card {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 14px;
+    background: var(--card);
+    border-radius: 16px;
     padding: 14px 16px;
     border: 1px solid rgba(15, 23, 42, 0.06);
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
@@ -79,6 +177,16 @@ h1 { color: var(--ink); }
 }
 .kpi-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .kpi-value { font-size: 22px; font-weight: 800; color: var(--ink); }
+.map-card {
+    background: var(--card);
+    border-radius: 18px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.1);
+    padding: 18px;
+    margin-bottom: 12px;
+}
+.map-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.map-sub { color: var(--muted); font-size: 13px; margin-bottom: 0; }
 .feature-list { margin: 8px 0 0 0; }
 .feature-list li { margin-bottom: 6px; }
 .source-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -88,11 +196,11 @@ h1 { color: var(--ink); }
     gap: 6px;
     padding: 6px 10px;
     border-radius: 999px;
-    background: rgba(15, 23, 42, 0.06);
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.2);
     font-size: 12px;
     font-weight: 600;
-    color: #0f172a;
+    color: #e2e8f0;
 }
 .source-dot {
     width: 8px;
@@ -119,6 +227,26 @@ h1 { color: var(--ink); }
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
     border-color: var(--bd-green);
 }
+.nav-card {
+    background: var(--card);
+    border-radius: 16px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 16px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+.nav-card h4 { margin: 0 0 6px 0; }
+.nav-card p { margin: 0 0 12px 0; color: var(--muted); font-size: 13px; }
+.nav-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(96, 165, 250, 0.2);
+    color: #bfdbfe;
+    font-size: 12px;
+    font-weight: 600;
+}
 .trust-section {
     background: radial-gradient(900px 420px at 10% -20%, rgba(15, 118, 110, 0.35), transparent 60%),
         radial-gradient(800px 400px at 90% 0%, rgba(2, 132, 199, 0.35), transparent 55%),
@@ -141,12 +269,12 @@ h1 { color: var(--ink); }
     text-transform: uppercase;
 }
 .trust-title {
-    font-size: 34px;
+    font-size: 32px;
     font-weight: 800;
     margin: 12px 0 10px 0;
 }
 .trust-sub {
-    font-size: 16px;
+    font-size: 15px;
     color: #cbd5f5;
     max-width: 760px;
 }
@@ -157,8 +285,8 @@ h1 { color: var(--ink); }
     margin-top: 24px;
 }
 .trust-card {
-    background: #ffffff;
-    color: #0f172a;
+    background: #111827;
+    color: #e2e8f0;
     border-radius: 18px;
     padding: 18px 20px;
     box-shadow: 0 12px 30px rgba(2, 6, 23, 0.18);
@@ -170,24 +298,24 @@ h1 { color: var(--ink); }
 }
 .trust-text {
     font-size: 13px;
-    color: #475569;
+    color: #cbd5f5;
     line-height: 1.6;
 }
 .trust-chip {
     display: inline-block;
     padding: 3px 6px;
     border-radius: 6px;
-    background: rgba(59, 130, 246, 0.15);
-    color: #1d4ed8;
+    background: rgba(96, 165, 250, 0.2);
+    color: #bfdbfe;
     font-weight: 600;
 }
 .trust-sources {
-    background: #f8fafc;
+    background: rgba(15, 23, 42, 0.6);
     border-radius: 16px;
     padding: 16px 18px;
     margin-top: 18px;
-    color: #0f172a;
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    color: #e2e8f0;
+    border: 1px solid rgba(148, 163, 184, 0.2);
 }
 .trust-sources h4 {
     margin: 0 0 8px 0;
@@ -196,29 +324,31 @@ h1 { color: var(--ink); }
 .trust-sources ul {
     margin: 0;
     padding-left: 18px;
-    color: #475569;
+    color: #cbd5f5;
     font-size: 13px;
 }
 .region-section {
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    background: radial-gradient(900px 420px at 10% -20%, rgba(14, 116, 144, 0.35), transparent 60%),
+        radial-gradient(800px 400px at 90% 0%, rgba(15, 118, 110, 0.35), transparent 55%),
+        #0b1220;
     padding: 32px;
-    border-radius: 18px;
+    border-radius: 22px;
     margin-bottom: 20px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    box-shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
 }
-.region-title { font-size: 26px; font-weight: 800; color: #0f172a; text-align: center; }
-.region-sub { color: #64748b; margin: 6px auto 24px auto; text-align: center; max-width: 720px; }
+.region-title { font-size: 28px; font-weight: 800; color: #f8fafc; text-align: center; }
+.region-sub { color: #cbd5f5; margin: 6px auto 24px auto; text-align: center; max-width: 720px; }
 .region-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .region-card {
     padding: 22px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 14px;
-    background-color: #ffffff;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    background-color: rgba(15, 23, 42, 0.75);
+    box-shadow: 0 12px 30px rgba(2, 6, 23, 0.4);
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.region-card:hover { transform: translateY(-6px); border-color: #1e40af; box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12); }
+.region-card:hover { transform: translateY(-6px); border-color: #38bdf8; box-shadow: 0 16px 34px rgba(2, 6, 23, 0.6); }
 .region-icon {
     font-size: 28px;
     margin-bottom: 10px;
@@ -228,17 +358,17 @@ h1 { color: var(--ink); }
     align-items: center;
     justify-content: center;
     border-radius: 12px;
-    background: #eef2ff;
-    color: #1e40af;
+    background: rgba(56, 189, 248, 0.15);
+    color: #7dd3fc;
 }
 .region-meta {
     display: flex;
     justify-content: space-between;
     font-size: 12px;
-    color: #64748b;
+    color: #94a3b8;
     margin-top: 16px;
     padding-top: 10px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
 }
 [data-testid="stImage"] img {
     width: 100%;
@@ -249,51 +379,84 @@ h1 { color: var(--ink); }
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
     filter: saturate(1.05) contrast(1.06) brightness(1.02);
 }
-@media (prefers-color-scheme: dark) {
-    body { color: #e2e8f0; }
-    .card,
-    .kpi-card {
-        background: rgba(15, 23, 42, 0.75);
-        border-color: rgba(148, 163, 184, 0.2);
-        box-shadow: 0 10px 26px rgba(2, 6, 23, 0.4);
+[data-testid="stImage"] img:hover {
+    transform: scale(1.01);
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+    transition: all 0.3s ease-in-out;
+}
+@media (prefers-color-scheme: light) {
+    :root {
+        --bd-green: #0a6d52;
+        --bd-red: #f43f5e;
+        --in-saffron: #ff9f1c;
+        --in-navy: #0b1b6a;
+        --in-green: #11805c;
+        --ink: #0b1220;
+        --muted: #5b6b82;
+        --paper: #f8fafc;
+        --card: #ffffff;
+        --accent: #2563eb;
+        --accent-2: #0ea5e9;
     }
-    .card-sub,
-    .kpi-label { color: #94a3b8; }
-    .kpi-value,
-    .card-title { color: #e2e8f0; }
+    body {
+        color: var(--ink);
+        background: radial-gradient(800px 400px at 10% -20%, rgba(14, 116, 144, 0.12), transparent 60%),
+            radial-gradient(700px 380px at 90% 0%, rgba(14, 116, 144, 0.10), transparent 55%),
+            #f5f7fb;
+    }
     .source-chip {
-        background: rgba(148, 163, 184, 0.12);
-        border-color: rgba(148, 163, 184, 0.2);
-        color: #e2e8f0;
+        background: rgba(15, 23, 42, 0.06);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        color: #0f172a;
     }
-    .source-dot { background: #22c55e; }
+    .nav-pill {
+        background: rgba(37, 99, 235, 0.12);
+        color: #1d4ed8;
+    }
+    .trust-card {
+        background: #ffffff;
+        color: #0f172a;
+    }
+    .trust-text { color: #475569; }
+    .trust-chip {
+        background: rgba(59, 130, 246, 0.15);
+        color: #1d4ed8;
+    }
     .trust-sources {
-        background: rgba(15, 23, 42, 0.6);
-        border-color: rgba(148, 163, 184, 0.2);
-        color: #e2e8f0;
+        background: #f8fafc;
+        color: #0f172a;
+        border: 1px solid rgba(15, 23, 42, 0.08);
     }
-    .trust-sources ul { color: #cbd5f5; }
+    .trust-sources ul { color: #475569; }
     .region-section {
-        background: radial-gradient(900px 420px at 10% -20%, rgba(14, 116, 144, 0.35), transparent 60%),
-            radial-gradient(800px 400px at 90% 0%, rgba(15, 118, 110, 0.35), transparent 55%),
-            #0b1220;
-        border-color: rgba(148, 163, 184, 0.2);
-        box-shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
+        background: linear-gradient(180deg, #ffffff 0%, #f2f5fb 100%);
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
     }
-    .region-title { color: #f8fafc; }
-    .region-sub { color: #cbd5f5; }
+    .region-title { color: #0f172a; }
+    .region-sub { color: #64748b; }
     .region-card {
-        background: rgba(15, 23, 42, 0.75);
-        border-color: rgba(148, 163, 184, 0.2);
-        box-shadow: 0 12px 30px rgba(2, 6, 23, 0.4);
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
     }
-    .region-card:hover { border-color: #38bdf8; box-shadow: 0 16px 34px rgba(2, 6, 23, 0.6); }
-    .region-icon { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
-    .region-meta { color: #94a3b8; border-top-color: rgba(148, 163, 184, 0.2); }
+    .region-card:hover { border-color: #1e40af; box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12); }
+    .region-icon { background: #eef2ff; color: #1e40af; }
+    .region-meta { color: #64748b; border-top-color: #e2e8f0; }
+    .hero-panel {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 64, 175, 0.35));
+        border: 1px solid rgba(96, 165, 250, 0.35);
+        box-shadow: inset 0 0 24px rgba(56, 189, 248, 0.18);
+    }
+    .hero-metric {
+        background: rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+    }
 }
 @media (max-width: 900px) {
     .hero { padding: 28px; }
     .hero-title { font-size: 30px; }
+    .hero-grid { grid-template-columns: 1fr; }
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .trust-grid { grid-template-columns: repeat(1, 1fr); }
     .region-grid { grid-template-columns: repeat(1, 1fr); }
@@ -313,13 +476,22 @@ st.sidebar.markdown("---")
 
 # ---------- Hero Section ----------
 st.markdown(
-    """
+    f"""
 <div class="hero">
-    <div class="hero-pill">Regional Development Intelligence</div>
-    <div class="hero-title">🌍 Transforming Regional Data Into Actionable Insight</div>
-    <div class="hero-subtitle">
-        Compare population, literacy, poverty, infrastructure, health, education and more —
-        built for rapid, evidence‑driven policy and research decisions.
+    <div>
+        <div class="hero-pill">South Asia Data Observatory</div>
+        <div class="hero-title">🌏 Mapping the Pulse of South Asian Development</div>
+        <div class="hero-accent"></div>
+        <div class="hero-subtitle">
+            An interactive analytics platform for exploring population, health,
+            education, infrastructure, and economic indicators across Bangladesh
+            and India — enabling evidence-driven research and policy insight.
+        </div>
+        <div class="hero-stats">
+            <div class="hero-stat">📊 {total_indicators} Indicators</div>
+            <div class="hero-stat">🗺️ {total_districts} Regions</div>
+            <div class="hero-stat">📅 {year_range} Data</div>
+        </div>
     </div>
 </div>
     """,
@@ -328,12 +500,16 @@ st.markdown(
 
 st.divider()
 
-st.divider()
-
 # ---------- South Asia Focus Map ----------
-st.subheader("South Asia Focus")
-st.caption("Highlighted focus countries within the South Asia region.")
-
+# st.markdown(
+#     """
+#     <div class="map-card">
+#         <div class="map-title">South Asia Focus</div>
+#         <div class="map-sub">Highlighted focus countries within the South Asia region.</div>
+#     </div>
+#     """,
+#     unsafe_allow_html=True,
+# )
 img_col_left, img_col_center, img_col_right = st.columns([1, 6, 1])
 with img_col_center:
     st.image("image (1).jpg", width=900)
@@ -341,8 +517,6 @@ with img_col_center:
 st.divider()
 
 # ---------- Dashboard Selection ----------
-# st.subheader("Explore by Region")
-
 st.markdown(
     """
     <section class="region-section">
@@ -374,12 +548,43 @@ st.markdown(
 )
 
 with st.container():
-    c1, c2 = st.columns(2, gap="large")
+    c1, c2, c3 = st.columns(3, gap="large")
     with c1:
-        st.page_link("pages/2_Bangladesh.py", label="Bangladesh")
-        st.page_link("pages/1_India.py", label="India")
+        st.markdown(
+            """
+            <div class="nav-card">
+                <div class="nav-pill">🇧🇩 Country profile</div>
+                <h4>Bangladesh</h4>
+                <p>National indicators, rankings, and progress trends.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.page_link("pages/2_Bangladesh.py", label="Open Bangladesh dashboard")
     with c2:
-        st.page_link("pages/3_District.py", label="Divisions & Districts")
+        st.markdown(
+            """
+            <div class="nav-card">
+                <div class="nav-pill">🇮🇳 Country profile</div>
+                <h4>India</h4>
+                <p>State-level comparisons and development snapshots.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.page_link("pages/1_India.py", label="Open India dashboard")
+    with c3:
+        st.markdown(
+            """
+            <div class="nav-card">
+                <div class="nav-pill">🧭 Sub-national</div>
+                <h4>Divisions & Districts</h4>
+                <p>Granular disparities across divisions and districts.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.page_link("pages/3_District.py", label="Open district dashboard")
 
 st.divider()
 
@@ -496,7 +701,7 @@ st.markdown(
         </div>
         <div class="kpi-card">
             <div class="kpi-label">Last Major Update</div>
-            <div class="kpi-value">2024-25</div>
+            <div class="kpi-value">2024–25</div>
         </div>
     </div>
     """,
@@ -527,30 +732,29 @@ st.markdown(
                 </div>
             </div>
             <div class="trust-card">
-                <div class="trust-stat">1987-2024</div>
+                <div class="trust-stat">1987–2024</div>
                 <div class="trust-text">
                     Time-series coverage for income classification and national macro indicators
                     spanning multiple census and survey cycles.
                 </div>
             </div>
-           <div class="trust-card">
-    <div class="trust-stat">Trusted Global Sources</div>
-    <div class="trust-text">
-        Our analytics engine pulls and reconciles data from 
-        <span class="trust-chip">UNDP</span>, 
-        <span class="trust-chip">World Population Review</span>, 
-        <span class="trust-chip">Data Pandas</span>, 
-        <span class="trust-chip">World Bank</span> 
-        and official national ministries to ensure absolute provenance.
-    </div>
-</div>
+            <div class="trust-card">
+                <div class="trust-stat">Trusted Global Sources</div>
+                <div class="trust-text">
+                    Our analytics engine pulls and reconciles data from
+                    <span class="trust-chip">UNDP</span>,
+                    <span class="trust-chip">World Population Review</span>,
+                    <span class="trust-chip">Data Pandas</span>,
+                    <span class="trust-chip">World Bank</span>
+                    and official national ministries to ensure absolute provenance.
+                </div>
             </div>
         </div>
         <div class="trust-sources">
             <h4>Primary sources</h4>
             <ul>
                 <li>BBS (Bangladesh), MoHFW BD, NITI Aayog, MoSPI India</li>
-                <li>UNDP,Word population review, SRS, DISE, World Bank</li>
+                <li>UNDP, World Population Review, SRS, DISE, World Bank</li>
             </ul>
         </div>
     </section>
