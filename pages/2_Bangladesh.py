@@ -284,8 +284,62 @@ def _render_bangladesh_overall_header(*, plot_df: pd.DataFrame) -> None:
 
 
 # ---------- ANALYTICS ----------
+def _render_data_quality_alerts(
+    *,
+    district_df: pd.DataFrame,
+    gdp_df: pd.DataFrame,
+    literacy_df: pd.DataFrame,
+    population_df: pd.DataFrame,
+    income_df: pd.DataFrame,
+) -> None:
+    # চার্ট দেখানোর আগে ডাটা কোয়ালিটি সম্পর্কে সতর্কতা দেখায়
+    issues: list[str] = []
+
+    def _missing_cols(df: pd.DataFrame, cols: set[str]) -> list[str]:
+        return sorted(cols - set(df.columns))
+
+    district_missing = _missing_cols(
+        district_df, {"Name", "division", "literacy_rate", "population", "poverty_rate"}
+    )
+    if district_missing:
+        issues.append(f"District data missing columns: {', '.join(district_missing)}.")
+
+    gdp_missing = _missing_cols(gdp_df, {"Country Name", "Year", "GDP"})
+    if gdp_missing:
+        issues.append(f"GDP data missing columns: {', '.join(gdp_missing)}.")
+
+    inflation_missing = _missing_cols(literacy_df, {"Year", "Inflation Rate (%)"})
+    if inflation_missing:
+        issues.append(f"Inflation data missing columns: {', '.join(inflation_missing)}.")
+
+    literacy_missing = _missing_cols(literacy_df, {"Year", "Literacy Rate(%)"})
+    if literacy_missing:
+        issues.append(f"Literacy data missing columns: {', '.join(literacy_missing)}.")
+
+    population_missing = _missing_cols(population_df, {"latitude", "longitude", "population", "popGrowth"})
+    if population_missing:
+        issues.append(f"Population data missing columns: {', '.join(population_missing)}.")
+
+    income_missing = _missing_cols(income_df, {"Year", "Bangladesh"})
+    if income_missing:
+        issues.append(f"Income status data missing columns: {', '.join(income_missing)}.")
+
+    if issues:
+        st.warning("Data Quality Alert")
+        for item in issues:
+            st.write(f"• {item}")
+
+
 def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
     # বাংলাদেশ জাতীয় অ্যানালিটিক্স সেকশন রেন্ডার করে
+    # ডাটা কোয়ালিটি চেক করে প্রাথমিক সতর্কতা দেখায়
+    _render_data_quality_alerts(
+        district_df=plot_df,
+        gdp_df=bangladesh_gdp_df,
+        literacy_df=bangladesh_literacy_df,
+        population_df=bangladesh_population_df,
+        income_df=income_status_df,
+    )
     required_cols = {"Name", "division", "literacy_rate", "population", "poverty_rate"}
     missing = sorted(required_cols - set(plot_df.columns))
     if missing:
@@ -305,7 +359,7 @@ def render_bangladesh_overall_analysis(*, plot_df: pd.DataFrame) -> None:
 
     st.markdown("---")
 
-    tab1, tab2, tab3 = st.tabs(["💰 Economy", "🎓 Education & Poverty", "👥 Population"])
+    tab1, tab2, tab3 = st.tabs(["Economy", "Education & Poverty", "Population"])
 
     with tab1:
         st.markdown('<div class="section-header">Economic Performance & Market Stability</div>', unsafe_allow_html=True)
