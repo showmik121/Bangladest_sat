@@ -18,43 +18,141 @@ DIVISION_POPULATION="population.csv"
 INCOME_SATUS="income.csv"
 
 # পরিষ্কার কাস্টম ন্যাভের জন্য Streamlit-এর ডিফল্ট সাইডবার ন্যাভ লুকানো।
-def inject_sidebar_style() -> None:
+def inject_sidebar_style(*, hide_sidebar: bool = False) -> None:
+    sidebar_css = """
+        :root {
+            --sidebar-width: 260px;
+            --sidebar-gap: 20px;
+        }
+        [data-testid="stSidebarNav"] { display: none; }
+        /* SIDEBAR (NOT FIXED) */
+        section[data-testid="stSidebar"] {
+            position: relative;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: auto;
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: 0 20px 50px rgba(2, 6, 23, 0.35);
+            padding: 10px;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        section[data-testid="stSidebar"] > div:first-child {
+            background: transparent;
+        }
+        [data-testid="stAppViewContainer"] {
+            margin-left: 0 !important;
+        }
+        .block-container {
+            max-width: 1200px !important;
+            margin: 0 auto !important;
+            padding-top: 2rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        section[data-testid="stSidebar"]:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 25px 60px rgba(2, 6, 23, 0.45);
+        }
+        section[data-testid="stSidebar"] .stButton > button {
+            border-radius: 10px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        section[data-testid="stSidebar"] h1 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        /* Sidebar text tones for glass background */
+        section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
+        section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
+        section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3,
+        section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+        section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] span,
+        section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] a {
+            color: #e2e8f0;
+        }
+        section[data-testid="stSidebar"] .stMarkdown hr {
+            border-color: rgba(148, 163, 184, 0.25);
+        }
+    """
+    hide_css = """
+        section[data-testid="stSidebar"] { display: none; }
+        [data-testid="stAppViewContainer"] { margin-left: 0 !important; }
+        .block-container {
+            max-width: 1200px !important;
+            margin: 0 auto !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    """
+    css = hide_css if hide_sidebar else sidebar_css
+    st.markdown(
+        f"""
+        <style>
+        {css}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_top_navbar(*, active: str = "Home") -> None:
     st.markdown(
         """
         <style>
-        [data-testid="stSidebarNav"] { display: none; }
-        [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #0b1220 0%, #0f172a 55%, #111827 100%);
-            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        .top-nav {
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            background: rgba(11, 18, 32, 0.9);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+            padding: 10px 16px;
+            margin-bottom: 14px;
+            border-radius: 16px;
+            box-shadow: 0 12px 28px rgba(2, 6, 23, 0.35);
         }
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3,
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] span,
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] a {
+        .top-nav-title {
+            font-weight: 700;
+            letter-spacing: 0.3px;
             color: #e2e8f0;
+            font-size: 16px;
         }
-        [data-testid="stSidebar"] .stMarkdown hr {
-            border-color: rgba(148, 163, 184, 0.25);
-        }
-        [data-testid="stSidebar"] .stButton > button {
-            background: rgba(96, 165, 250, 0.2);
-            color: #e2e8f0;
-            border: 1px solid rgba(96, 165, 250, 0.4);
+        .top-nav-link button {
+            width: 100%;
             border-radius: 10px;
-        }
-        [data-testid="stSidebar"] .stButton > button:hover {
-            background: rgba(56, 189, 248, 0.3);
-            border-color: rgba(56, 189, 248, 0.6);
-        }
-        [data-testid="stSidebar"] [data-testid="stSidebarNav"] a {
+            font-weight: 600;
+            background: rgba(148, 163, 184, 0.12);
             color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.25);
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
+
+    st.markdown('<div class="top-nav">', unsafe_allow_html=True)
+    title_col, home_col, bd_col, in_col, about_col = st.columns(
+        [2.2, 1, 1, 1, 1], gap="small"
+    )
+    with title_col:
+        st.markdown('<div class="top-nav-title">🌏 South Asia Data Observatory</div>', unsafe_allow_html=True)
+    with home_col:
+        st.page_link("app.py", label="Home")
+    with bd_col:
+        st.page_link("pages/2_Bangladesh.py", label="Bangladesh")
+    with in_col:
+        st.page_link("pages/1_India.py", label="India")
+    with about_col:
+        st.page_link("pages/4_About.py", label="About Us")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 

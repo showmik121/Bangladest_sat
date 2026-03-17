@@ -4,6 +4,7 @@ import streamlit as st
 from dashboard_utils import (
     inject_sidebar_style,
     load_income_status_data,
+    render_top_navbar,
 )
 
 total_indicators = 22  # Update later if indicator list becomes dynamic
@@ -17,7 +18,8 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-inject_sidebar_style()
+inject_sidebar_style(hide_sidebar=True)
+render_top_navbar(active="Home")
 
 # ---------- Theme Styling ----------
 st.markdown(
