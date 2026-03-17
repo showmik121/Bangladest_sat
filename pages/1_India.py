@@ -1,3 +1,5 @@
+import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 from dashboard_utils import inject_sidebar_style, load_india_data, render_country_page
@@ -14,6 +16,93 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("🌍 Regional Dashboard")
 
 india_df = load_india_data()
+
+size_params = [
+    "Population",
+    "Households_with_Internet",
+    "Housholds_with_Electric_Lighting",
+    "LPG_or_PNG_Households",
+]
+
+color_params = [
+    "literacy_rate",
+    "sex_ratio",
+    "Graduate_rate",
+]
+
+# ---------- MAP ----------
+def _get_auto_center_zoom(df: pd.DataFrame, lat_col: str, lon_col: str) -> tuple[float, float, int]:
+    if df.empty or lat_col not in df.columns or lon_col not in df.columns:
+        return 22.8, 79.0, 4
+
+    lat = pd.to_numeric(df[lat_col], errors="coerce").dropna()
+    lon = pd.to_numeric(df[lon_col], errors="coerce").dropna()
+    if lat.empty or lon.empty:
+        return 22.8, 79.0, 4
+    if len(lat) < 2 or len(lon) < 2:
+        return float(lat.mean()), float(lon.mean()), 5
+
+    lat_rng = float(lat.max() - lat.min())
+    lon_rng = float(lon.max() - lon.min())
+    zoom = 5 if lat_rng < 8 else 4
+    if lat_rng < 4 or lon_rng < 4:
+        zoom = 6
+    return float(lat.mean()), float(lon.mean()), zoom
+
+
+def render_india_plot(
+    *,
+    plot_df: pd.DataFrame,
+    primary: str,
+    secondary: str,
+    lat_column: str,
+    lon_column: str,
+    zoom: int,
+    title: str,
+) -> None:
+    secondary_l = secondary.lower()
+    if "literacy" in secondary_l or "graduate" in secondary_l:
+        color_scale = "RdYlGn"
+    elif "sex_ratio" in secondary_l:
+        color_scale = "Blues"
+    elif "population" in secondary_l or "household" in secondary_l:
+        color_scale = "YlGnBu"
+    else:
+        color_scale = "Viridis"
+
+    center_lat, center_lon, auto_zoom = _get_auto_center_zoom(plot_df, lat_column, lon_column)
+    hover_name = "District" if "District" in plot_df.columns else "State"
+    hover_data = {
+        primary: ":.0f",
+        secondary: ":.2f",
+    }
+
+    fig = px.scatter_mapbox(
+        plot_df,
+        lat=lat_column,
+        lon=lon_column,
+        size=primary,
+        color=secondary,
+        size_max=20,
+        hover_name=hover_name,
+        hover_data=hover_data,
+        opacity=0.85,
+        zoom=auto_zoom,
+        center=dict(lat=center_lat, lon=center_lon),
+        height=680,
+        mapbox_style="carto-positron",
+        color_continuous_scale=color_scale,
+        title=title,
+    )
+    fig.update_traces(marker=dict(opacity=0.8, sizemin=6))
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=30, b=0),
+        coloraxis_colorbar=dict(
+            title=secondary.replace("_", " ").title(),
+        ),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
 
 # সামগ্রিক ভারতের জন্য হেডার/হিরো সেকশন।
 def _render_india_overall_header(*, plot_df) -> None:
@@ -136,7 +225,12 @@ render_country_page(
     lat_column="Latitude",
     lon_column="Longitude",
     overall_label="Overall India",
+    primary_options=size_params,
+    secondary_options=color_params,
+    render_plot_fn=render_india_plot,
     render_overall_header_fn=_render_india_overall_header,
     title_override="",
     header_description=None,
+    map_section_title="Map Section",
+    map_section_description="Interactive state bubble map for comparing indicators.",
 )

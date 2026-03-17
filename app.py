@@ -11,7 +11,7 @@ year_range = "1987–2024"
 total_districts = 64 + 36
 
 st.set_page_config(
-    page_title="Regional Development Intelligence Dashboard",
+    page_title="South Asia Data Observatory",
     page_icon="🌍",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -42,9 +42,7 @@ html, body, [class*="css"]  {
 }
 body {
     color: var(--ink);
-    background: radial-gradient(900px 420px at 10% -20%, rgba(14, 116, 144, 0.35), transparent 60%),
-        radial-gradient(800px 400px at 90% 0%, rgba(15, 118, 110, 0.35), transparent 55%),
-        #0b1220;
+    background: linear-gradient(135deg, #0b1220 0%, #0f172a 45%, #111827 100%);
 }
 h1, h2, h3, h4 {
     font-family: "Fraunces", "Times New Roman", serif;
@@ -99,6 +97,7 @@ h1, h2, h3, h4 {
     border: 1px solid rgba(148, 163, 184, 0.25);
     font-size: 12px;
     font-weight: 600;
+    color: var(--ink);
 }
 .hero-pill {
     display: inline-block;
@@ -110,6 +109,7 @@ h1, h2, h3, h4 {
     margin-bottom: 10px;
     letter-spacing: 0.6px;
     text-transform: uppercase;
+    color: white;
 }
 .hero-grid {
     display: grid;
@@ -136,12 +136,14 @@ h1, h2, h3, h4 {
 .hero-metric strong { font-size: 16px; }
 .hero-metric span { font-size: 12px; opacity: 0.85; }
 .card {
-    background: var(--card);
-    border: 1px solid rgba(15, 23, 42, 0.06);
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 18px;
-    padding: 18px 18px 14px 18px;
-    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
-    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    padding: 20px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+    transition: all 0.3s ease;
 }
 .card-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
 .card-sub { color: var(--muted); font-size: 14px; margin-bottom: 10px; }
@@ -168,12 +170,13 @@ h1, h2, h3, h4 {
 }
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 .kpi-card {
-    background: var(--card);
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-radius: 16px;
-    padding: 14px 16px;
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
-    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    padding: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    transition: all 0.25s ease;
 }
 .kpi-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .kpi-value { font-size: 22px; font-weight: 800; color: var(--ink); }
@@ -221,11 +224,13 @@ h1, h2, h3, h4 {
     font-weight: 700;
     border-radius: 10px;
 }
-.card:hover,
+.card:hover {
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.18);
+}
 .kpi-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
-    border-color: var(--bd-green);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.15);
 }
 .nav-card {
     background: var(--card);
@@ -384,75 +389,6 @@ h1, h2, h3, h4 {
     box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
     transition: all 0.3s ease-in-out;
 }
-@media (prefers-color-scheme: light) {
-    :root {
-        --bd-green: #0a6d52;
-        --bd-red: #f43f5e;
-        --in-saffron: #ff9f1c;
-        --in-navy: #0b1b6a;
-        --in-green: #11805c;
-        --ink: #0b1220;
-        --muted: #5b6b82;
-        --paper: #f8fafc;
-        --card: #ffffff;
-        --accent: #2563eb;
-        --accent-2: #0ea5e9;
-    }
-    body {
-        color: var(--ink);
-        background: radial-gradient(800px 400px at 10% -20%, rgba(14, 116, 144, 0.12), transparent 60%),
-            radial-gradient(700px 380px at 90% 0%, rgba(14, 116, 144, 0.10), transparent 55%),
-            #f5f7fb;
-    }
-    .source-chip {
-        background: rgba(15, 23, 42, 0.06);
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        color: #0f172a;
-    }
-    .nav-pill {
-        background: rgba(37, 99, 235, 0.12);
-        color: #1d4ed8;
-    }
-    .trust-card {
-        background: #ffffff;
-        color: #0f172a;
-    }
-    .trust-text { color: #475569; }
-    .trust-chip {
-        background: rgba(59, 130, 246, 0.15);
-        color: #1d4ed8;
-    }
-    .trust-sources {
-        background: #f8fafc;
-        color: #0f172a;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-    }
-    .trust-sources ul { color: #475569; }
-    .region-section {
-        background: linear-gradient(180deg, #ffffff 0%, #f2f5fb 100%);
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
-    }
-    .region-title { color: #0f172a; }
-    .region-sub { color: #64748b; }
-    .region-card {
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-    }
-    .region-card:hover { border-color: #1e40af; box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12); }
-    .region-icon { background: #eef2ff; color: #1e40af; }
-    .region-meta { color: #64748b; border-top-color: #e2e8f0; }
-    .hero-panel {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 64, 175, 0.35));
-        border: 1px solid rgba(96, 165, 250, 0.35);
-        box-shadow: inset 0 0 24px rgba(56, 189, 248, 0.18);
-    }
-    .hero-metric {
-        background: rgba(15, 23, 42, 0.55);
-        border: 1px solid rgba(148, 163, 184, 0.25);
-    }
-}
 @media (max-width: 900px) {
     .hero { padding: 28px; }
     .hero-title { font-size: 30px; }
@@ -512,7 +448,7 @@ st.divider()
 # )
 img_col_left, img_col_center, img_col_right = st.columns([1, 6, 1])
 with img_col_center:
-    st.image("image (1).jpg", width=900)
+    st.image("south-asia-map.jpg", width=900)
 
 st.divider()
 

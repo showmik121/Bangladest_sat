@@ -8,14 +8,14 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-INDIA_FILE = "india"
+INDIA_FILE = "india.csv"
 # BANGLADESH_FILE = "bangladesh_sat.csv"
 # BANGLADESH_FILE = "Up_Ban"
-BANGLADESH_FILE = "final_ban"
-BANGLADESH_GDP_FILE = "Gdp"
-BANGLADESH_LITERACY_RATE="litracy"
-DIVISION_POPULATION="population"
-INCOME_SATUS="income"
+BANGLADESH_FILE = "final_ban.csv"
+BANGLADESH_GDP_FILE = "Gdp.csv"
+BANGLADESH_LITERACY_RATE="litracy.csv"
+DIVISION_POPULATION="population.csv"
+INCOME_SATUS="income.csv"
 
 # পরিষ্কার কাস্টম ন্যাভের জন্য Streamlit-এর ডিফল্ট সাইডবার ন্যাভ লুকানো।
 def inject_sidebar_style() -> None:
@@ -23,6 +23,34 @@ def inject_sidebar_style() -> None:
         """
         <style>
         [data-testid="stSidebarNav"] { display: none; }
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #0b1220 0%, #0f172a 55%, #111827 100%);
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3,
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] span,
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] a {
+            color: #e2e8f0;
+        }
+        [data-testid="stSidebar"] .stMarkdown hr {
+            border-color: rgba(148, 163, 184, 0.25);
+        }
+        [data-testid="stSidebar"] .stButton > button {
+            background: rgba(96, 165, 250, 0.2);
+            color: #e2e8f0;
+            border: 1px solid rgba(96, 165, 250, 0.4);
+            border-radius: 10px;
+        }
+        [data-testid="stSidebar"] .stButton > button:hover {
+            background: rgba(56, 189, 248, 0.3);
+            border-color: rgba(56, 189, 248, 0.6);
+        }
+        [data-testid="stSidebar"] [data-testid="stSidebarNav"] a {
+            color: #e2e8f0;
+        }
         </style>
         """,
         unsafe_allow_html=True,
